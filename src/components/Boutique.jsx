@@ -31,8 +31,7 @@ export default function Boutique({ isOnline }) {
 
   const loadData = async () => {
     if (!isOnline) {
-      setMessage('Mode hors ligne - Fonctionnalité limitée');
-      setMessageType('warning');
+      showMessage('Mode hors ligne - Fonctionnalité limitée', 'warning');
       setLoading(false);
       return;
     }
@@ -43,16 +42,22 @@ export default function Boutique({ isOnline }) {
       setProfil(profilResponse.data);
 
       let boutiquesResponse;
+      // On utilise mesBoutiques pour tout le monde sauf admin global pour être sûr
       if (profilResponse.data.role === 'admin') {
         boutiquesResponse = await boutiqueAPI.list();
       } else {
         boutiquesResponse = await boutiqueAPI.mesBoutiques();
       }
 
-      setBoutiques(boutiquesResponse.data.results || boutiquesResponse.data);
+      // Gestion robuste du format de réponse (tableau direct ou pagination .results)
+      const data = Array.isArray(boutiquesResponse.data)
+        ? boutiquesResponse.data
+        : (boutiquesResponse.data.results || []);
+
+      setBoutiques(data);
     } catch (error) {
       console.error('Erreur chargement boutiques:', error);
-      showMessage('Erreur lors du chargement', 'error');
+      showMessage('Erreur lors du chargement des données', 'error');
     }
     setLoading(false);
   };
@@ -73,19 +78,28 @@ export default function Boutique({ isOnline }) {
 
     try {
       if (editingBoutique) {
+        // Mise à jour
         await boutiqueAPI.update(editingBoutique.id, formData);
         showMessage('✅ Boutique mise à jour avec succès');
       } else {
-        const dataToSend = { ...formData, proprietaire: profil.id };
-        await boutiqueAPI.create(dataToSend);
+        // Création : On envoie seulement formData.
+        // Le backend gère le propriétaire via le Token.
+        await boutiqueAPI.create(formData);
         showMessage('✅ Boutique créée avec succès');
       }
 
       handleCancelForm();
-      await loadData();
+      await loadData(); // Recharger la liste
     } catch (error) {
       console.error('Erreur sauvegarde boutique:', error);
-      showMessage('❌ Erreur: ' + (error.response?.data?.message || error.message), 'error');
+
+      // Affichage précis de l'erreur venant du backend (ex: "Quota dépassé")
+      const errorMsg = error.response?.data?.detail
+        || error.response?.data?.message
+        || JSON.stringify(error.response?.data)
+        || error.message;
+
+      showMessage('❌ Erreur: ' + errorMsg, 'error');
     }
   };
 
@@ -113,6 +127,7 @@ export default function Boutique({ isOnline }) {
       showMessage('✅ Boutique supprimée');
       await loadData();
     } catch (error) {
+      console.error(error);
       showMessage('❌ Erreur lors de la suppression', 'error');
     }
   };
@@ -176,7 +191,6 @@ export default function Boutique({ isOnline }) {
                   </div>
                   {canCreateBoutique && isOnline && (
                     <div className="card-actions">
-                      {/* ✅ BOUTON MODIFIER AVEC TEXTE */}
                       <button onClick={() => handleEdit(boutique)} className="btn-edit">
                         <Edit2 size={16} /> Modifier
                       </button>
@@ -263,6 +277,17 @@ export default function Boutique({ isOnline }) {
                 </div>
               </div>
 
+              <div className="form-group checkbox-group">
+                <label>
+                    <input
+                        type="checkbox"
+                        checked={formData.active}
+                        onChange={(e) => setFormData({...formData, active: e.target.checked})}
+                    />
+                    Boutique Active
+                </label>
+              </div>
+
               <div className="modal-footer">
                 <button type="button" onClick={handleCancelForm} className="btn-cancel">Annuler</button>
                 <button type="submit" className="btn-submit">{editingBoutique ? 'Mettre à jour' : 'Créer'}</button>
@@ -308,8 +333,6 @@ export default function Boutique({ isOnline }) {
         .status-badge.inactive { background: #fee2e2; color: #991b1b; }
 
         .card-actions { display: flex; gap: 10px; align-items: center; }
-
-        /* STYLES BOUTONS ACTIONS */
         .btn-edit { display: flex; align-items: center; gap: 6px; background: #eff6ff; color: #3b82f6; border: 1px solid #bfdbfe; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .btn-edit:hover { background: #3b82f6; color: white; }
 
@@ -344,6 +367,8 @@ export default function Boutique({ isOnline }) {
         .input-wrapper input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
         .form-group { margin-bottom: 20px; }
         .form-group label { display: block; margin-bottom: 8px; color: #64748b; font-size: 0.85rem; font-weight: 600; }
+        .checkbox-group label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .checkbox-group input { width: 16px; height: 16px; cursor: pointer; }
 
         .modal-footer { padding: 20px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; }
         .btn-cancel { padding: 10px 20px; border: 1px solid #e2e8f0; background: white; color: #64748b; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
