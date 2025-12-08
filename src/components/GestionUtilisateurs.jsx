@@ -15,6 +15,7 @@ export default function GestionUtilisateurs({ isOnline }) {
   const [quota, setQuota] = useState(null);
   const [currentUserRole, setCurrentUserRole] = useState(null);
 
+  // État du formulaire
   const [formData, setFormData] = useState({
     username: '',
     email: '',
@@ -23,7 +24,7 @@ export default function GestionUtilisateurs({ isOnline }) {
     last_name: '',
     telephone: '',
     role: 'vendeur',
-    boutiques: []
+    boutiques: [] // ✅ Tableau d'IDs
   });
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export default function GestionUtilisateurs({ isOnline }) {
         ? boutiquesRes.data
         : boutiquesRes.data?.results || boutiquesRes.data || [];
 
+      // Filtrer : Le gérant ne voit pas les admins
       const filteredUsers = usersData.filter(user => {
         if (myRole === 'admin') return true;
         return user.profil?.role !== 'admin';
@@ -71,6 +73,7 @@ export default function GestionUtilisateurs({ isOnline }) {
       setUtilisateurs(filteredUsers);
       setBoutiques(boutiquesData);
 
+      // Pré-sélectionner la première boutique si dispo
       if (boutiquesData.length > 0 && formData.boutiques.length === 0) {
         setFormData(prev => ({ ...prev, boutiques: [boutiquesData[0].id] }));
       }
@@ -107,20 +110,23 @@ export default function GestionUtilisateurs({ isOnline }) {
     }
 
     try {
+      // ✅ Payload structuré pour le backend
       const userData = {
         username: formData.username,
         email: formData.email,
         password: formData.password,
         first_name: formData.first_name,
         last_name: formData.last_name,
+        boutiques: formData.boutiques, // Liste des IDs envoyée à la racine
         profil: {
           role: formData.role,
-          telephone: formData.telephone,
-          boutiques: formData.boutiques
+          telephone: formData.telephone
         }
       };
 
       await usersAPI.create(userData);
+
+      alert('✅ Utilisateur créé avec succès');
       setShowForm(false);
       resetForm();
       await loadData();
@@ -128,7 +134,14 @@ export default function GestionUtilisateurs({ isOnline }) {
 
     } catch (err) {
       console.error('❌ Erreur création:', err);
-      alert('Erreur lors de la création');
+      // Gestion des messages d'erreur du backend
+      let msg = 'Erreur lors de la création';
+      if (err.response && err.response.data) {
+        if (err.response.data.detail) msg = err.response.data.detail;
+        else if (err.response.data.username) msg = `Nom d'utilisateur : ${err.response.data.username[0]}`;
+        else if (err.response.data.password) msg = `Mot de passe : ${err.response.data.password[0]}`;
+      }
+      alert('❌ ' + msg);
     }
   };
 
@@ -145,11 +158,12 @@ export default function GestionUtilisateurs({ isOnline }) {
     });
   };
 
+  // Gestion des cases à cocher (Multi-select)
   const handleBoutiqueChange = (boutiqueId) => {
     setFormData(prev => {
       const newBoutiques = prev.boutiques.includes(boutiqueId)
-        ? prev.boutiques.filter(id => id !== boutiqueId)
-        : [...prev.boutiques, boutiqueId];
+        ? prev.boutiques.filter(id => id !== boutiqueId) // Retirer
+        : [...prev.boutiques, boutiqueId]; // Ajouter
       return { ...prev, boutiques: newBoutiques };
     });
   };
@@ -368,7 +382,7 @@ export default function GestionUtilisateurs({ isOnline }) {
               </div>
 
               <div className="form-group">
-                <label>Boutiques * ({formData.boutiques.length})</label>
+                <label>Boutiques * (Cochez pour assigner)</label>
                 <div className="boutiques-grid">
                   {boutiques.length === 0 ? (
                     <p className="error-text">❌ Aucune boutique disponible</p>
@@ -398,8 +412,6 @@ export default function GestionUtilisateurs({ isOnline }) {
 
       <style jsx>{`
         .page-container { min-height: 100vh; background-color: #f8fafc; color: #1e293b; font-family: 'Inter', sans-serif; padding-bottom: 90px; }
-
-        /* HEADER */
         .page-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 20; }
         .header-left { display: flex; align-items: center; gap: 24px; }
         .back-btn { display: flex; align-items: center; gap: 8px; color: #64748b; text-decoration: none; font-weight: 500; padding: 8px 12px; border-radius: 8px; transition: 0.2s; }
@@ -407,12 +419,10 @@ export default function GestionUtilisateurs({ isOnline }) {
         .title-block h1 { margin: 0; font-size: 1.5rem; font-weight: 700; color: #0f172a; }
         .subtitle { margin: 4px 0 0; font-size: 0.85rem; color: #64748b; }
         .btn-primary { background: #4f46e5; color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: 0.2s; }
-        .btn-primary:hover { background: #4338ca; }
+        .btn-primary:hover:not(:disabled) { background: #4338ca; }
         .btn-primary:disabled { background: #9ca3af; cursor: not-allowed; }
 
         .content-wrapper { max-width: 1000px; margin: 30px auto; padding: 0 20px; }
-
-        /* QUOTA CARD */
         .quota-card { background: white; padding: 16px 20px; border-radius: 12px; display: flex; align-items: center; gap: 16px; margin-bottom: 24px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .quota-card.warning { border-color: #fecaca; background: #fef2f2; }
         .quota-icon { width: 40px; height: 40px; background: #e0e7ff; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #4f46e5; }
@@ -420,7 +430,6 @@ export default function GestionUtilisateurs({ isOnline }) {
         .quota-info p { margin: 2px 0 0; color: #64748b; font-size: 0.85rem; }
         .upgrade-link { margin-left: auto; color: #ef4444; font-weight: 600; font-size: 0.85rem; text-decoration: underline; }
 
-        /* GRID USERS */
         .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .section-header h2 { font-size: 1.1rem; color: #334155; margin: 0; }
         .btn-refresh { display: flex; align-items: center; gap: 6px; background: none; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; color: #64748b; transition: 0.2s; }
@@ -444,57 +453,28 @@ export default function GestionUtilisateurs({ isOnline }) {
         .info-row svg { color: #94a3b8; }
         .boutiques-list { display: flex; align-items: flex-start; gap: 10px; color: #64748b; font-size: 0.85rem; background: #f8fafc; padding: 8px; border-radius: 6px; }
         .boutiques-list svg { margin-top: 2px; }
-
         .user-footer { padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 0.75rem; color: #94a3b8; text-align: right; }
 
-        /* MODAL & FORMS */
         .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; animation: fadeIn 0.2s; }
         .modal-card { background: white; width: 100%; max-width: 600px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); margin: 20px; max-height: 90vh; overflow-y: auto; }
         .modal-header { padding: 20px 24px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; position: sticky; top: 0; z-index: 10; }
         .modal-header h2 { margin: 0; font-size: 1.25rem; color: #1e293b; }
         .close-btn { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 4px; transition: 0.2s; }
         .close-btn:hover { color: #ef4444; }
-
         .modal-body { padding: 24px; }
         .input-wrapper { position: relative; display: flex; align-items: center; }
         .input-icon { position: absolute; left: 14px; color: #94a3b8; pointer-events: none; }
         .input-wrapper input, .input-wrapper select { width: 100%; padding: 12px 14px 12px 40px; border: 1px solid #e2e8f0; border-radius: 10px; outline: none; font-size: 0.95rem; color: #1e293b; background: white; appearance: none; }
         .simple-input { width: 100%; padding: 12px 14px; border: 1px solid #e2e8f0; border-radius: 10px; outline: none; font-size: 0.95rem; color: #1e293b; }
         .input-wrapper input:focus, .input-wrapper select:focus, .simple-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
-
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
         .form-group { margin-bottom: 16px; }
         .form-group label { display: block; margin-bottom: 8px; color: #64748b; font-size: 0.85rem; font-weight: 600; }
-
         .boutiques-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; max-height: 150px; overflow-y: auto; padding: 10px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
         .boutique-option { display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
         .boutique-option.selected { border-color: #6366f1; background: #eef2ff; color: #4f46e5; font-weight: 600; }
-        .boutique-option input { width: auto; }
-
         .modal-footer { padding: 20px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; }
-        .btn-cancel { padding: 10px 20px; border: 1px solid #e2e8f0; background: white; color: #64748b; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-cancel:hover { background: #f1f5f9; color: #1e293b; }
-        .btn-submit { padding: 10px 20px; border: none; background: #4f46e5; color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-        .btn-submit:hover:not(:disabled) { background: #4338ca; }
-        .btn-submit:disabled { background: #9ca3af; cursor: not-allowed; }
-
-        /* EMPTY & LOADING */
-        .empty-state { text-align: center; padding: 60px 20px; color: #64748b; background: white; border-radius: 16px; border: 1px dashed #e2e8f0; }
-        .empty-icon { width: 64px; height: 64px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: #94a3b8; }
-        .loading-state { text-align: center; padding: 40px; color: #64748b; }
-        .spin { animation: spin 1s linear infinite; }
-
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        @media (max-width: 640px) {
-          .page-header { flex-direction: column; align-items: flex-start; gap: 16px; padding: 16px; }
-          .header-right { width: 100%; display: flex; justify-content: flex-end; }
-          .form-row { grid-template-columns: 1fr; margin-bottom: 0; }
-          .users-grid { grid-template-columns: 1fr; }
-        }
-      `}</style>
+    `}</style>
     </div>
   );
 }
