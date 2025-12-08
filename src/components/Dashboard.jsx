@@ -14,7 +14,7 @@ import {
   TrendingUp, Wallet, LogOut, RefreshCw,
   History, Truck, Store, FileText, UserCog,
   Download, CreditCard, AlertCircle, ChevronRight,
-  CheckCircle, Wifi, WifiOff, CloudUpload, Database
+  CheckCircle, Wifi, WifiOff, CloudUpload, Database // ✅ Ajout icône Database
 } from 'lucide-react';
 
 /* ==================================================================================
@@ -217,16 +217,6 @@ export default function Dashboard({ isOnline }) {
     </Link>
   );
 
-  // Helper pour vérifier si l'abonnement est expiré
-  const isAboExpired = (abo) => {
-    if (!abo) return false;
-    if (abo.is_expired) return true; // Si le backend envoie cette info
-    if (abo.date_fin) {
-      return new Date(abo.date_fin) < new Date();
-    }
-    return false;
-  };
-
   return (
     <div className="dashboard-container">
       <aside className={`sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
@@ -245,11 +235,13 @@ export default function Dashboard({ isOnline }) {
             <NavItem to="/historique-mes-ventes" icon={History} title="Mon Historique" />
           ) : (
             <>
+              {/* ✅ Ajout lien Boutiques */}
               <NavItem to="/boutiques" icon={Store} title="Boutiques" />
               <NavItem to="/historique-ventes" icon={FileText} title="Historique" />
               <NavItem to="/depenses" icon={CreditCard} title="Dépenses" />
               <NavItem to="/entrees-marchandise" icon={Download} title="Entrées Stock" />
               <NavItem to="/fournisseurs" icon={Truck} title="Fournisseurs" />
+              {/* ✅ Ajout lien Exports */}
               <NavItem to="/export" icon={Database} title="Exports" />
               <NavItem to="/rapports" icon={TrendingUp} title="Rapports" />
               <NavItem to="/utilisateurs" icon={UserCog} title="Équipe" />
@@ -282,36 +274,13 @@ export default function Dashboard({ isOnline }) {
 
         <div className="scroll-content">
           <div className="dashboard-wrapper">
-
-            {/* ✅ BANNIÈRE INTELLIGENTE */}
             {abonnement && (isGerant || isAdmin) && (
-              <div className={`alert-banner ${
-                isAboExpired(abonnement) ? 'expired'
-                : abonnement.type_abonnement === 'GRATUIT' ? 'warning'
-                : 'premium'
-              }`}>
-                {isAboExpired(abonnement) ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-
+              <div className={`alert-banner ${abonnement.type_abonnement === 'GRATUIT' ? 'warning' : 'premium'}`}>
+                <AlertCircle size={20} />
                 <div className="alert-text">
-                  <strong>
-                    {isAboExpired(abonnement)
-                      ? `Abonnement ${abonnement.type_abonnement} EXPIRÉ`
-                      : `Plan ${abonnement.type_abonnement}`
-                    }
-                  </strong>
-                  {abonnement.date_fin && (
-                    <span className="alert-date">
-                      • {isAboExpired(abonnement) ? "A expiré le " : "Expire le "}
-                      {new Date(abonnement.date_fin).toLocaleDateString()}
-                    </span>
-                  )}
+                  <strong>{abonnement.type_abonnement}</strong>
+                  {abonnement.date_fin && <span className="alert-date"> • Expire le {new Date(abonnement.date_fin).toLocaleDateString()}</span>}
                 </div>
-
-                {isAboExpired(abonnement) && (
-                   <Link to="/abonnement" className="btn-renew-banner">
-                     Renouveler
-                   </Link>
-                )}
               </div>
             )}
 
@@ -344,11 +313,16 @@ export default function Dashboard({ isOnline }) {
                 {!isVendeur && (
                   <>
                     <ActionButton to="/historique-ventes" icon={FileText} title="Historique" color="indigo" />
+                    {/* ✅ BOUTON BOUTIQUES */}
                     <ActionButton to="/boutiques" icon={Store} title="Boutiques" color="pink" />
+
                     <ActionButton to="/depenses" icon={CreditCard} title="Dépenses" color="red" />
                     <ActionButton to="/entrees-marchandise" icon={Download} title="Entrées Stock" color="cyan" />
                     <ActionButton to="/fournisseurs" icon={Truck} title="Fournisseurs" color="teal" />
+
+                    {/* ✅ BOUTON EXPORTS */}
                     <ActionButton to="/export" icon={Database} title="Exports & Données" color="dark" />
+
                     <ActionButton to="/rapports" icon={TrendingUp} title="Rapports" color="green" />
                     <ActionButton to="/utilisateurs" icon={UserCog} title="Équipe" color="gray" />
                   </>
@@ -398,18 +372,9 @@ export default function Dashboard({ isOnline }) {
         .dashboard-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .actions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .section-title { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 0; }
-
-        /* BANNIÈRES */
-        .alert-banner { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem; line-height: 1.5; }
+        .alert-banner { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem; line-height: 1.5; }
         .alert-banner.warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
         .alert-banner.premium { background: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; }
-        /* Nouveau style Expired */
-        .alert-banner.expired { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
-
-        .alert-text { flex: 1; }
-        .btn-renew-banner { background: #dc2626; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.8rem; white-space: nowrap; transition: 0.2s; }
-        .btn-renew-banner:hover { background: #b91c1c; }
-
         .stats-section { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
         .stat-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; align-items: center; gap: 16px; border: 1px solid #f1f5f9; transition: transform 0.2s; }
         .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
@@ -438,15 +403,15 @@ export default function Dashboard({ isOnline }) {
         .hover-green .action-icon-box { background: #dcfce7; color: #22c55e; }
         .hover-gray .action-icon-box { background: #f1f5f9; color: #64748b; }
         .hover-gold .action-icon-box { background: #fef9c3; color: #ca8a04; }
-        .hover-pink .action-icon-box { background: #fce7f3; color: #db2777; }
-        .hover-dark .action-icon-box { background: #334155; color: #f8fafc; }
+        .hover-pink .action-icon-box { background: #fce7f3; color: #db2777; } /* Nouveau rose pour Boutique */
+        .hover-dark .action-icon-box { background: #334155; color: #f8fafc; } /* Nouveau sombre pour Export */
         .action-title { font-size: 0.9rem; font-weight: 500; color: #475569; flex: 1; }
         .arrow-icon { color: #cbd5e1; }
         .glass-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); padding: 8px 30px; border-radius: 30px; display: flex; gap: 30px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05); z-index: 100; }
         .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: #94a3b8; font-size: 0.7rem; font-weight: 500; gap: 4px; }
         .nav-item.active { color: #4f46e5; }
         @media (max-width: 1024px) { .stats-section { grid-template-columns: repeat(2, 1fr); } .actions-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 768px) { .sidebar { position: fixed; left: 0; top: 0; height: 100%; transform: translateX(-100%); box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1); } .sidebar.mobile-open { transform: translateX(0); } .close-sidebar, .menu-toggle { display: block; } .dashboard-wrapper { padding: 16px; } .greeting { font-size: 1.1rem; } .logout-text, .arrow-icon { display: none; } .btn-logout { padding: 8px; border-radius: 50%; aspect-ratio: 1; } .stats-section { grid-template-columns: 1fr; gap: 12px; } .stat-card { padding: 16px; } .actions-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .action-btn { flex-direction: column; text-align: center; padding: 12px 8px; gap: 8px; } .action-title { font-size: 0.8rem; line-height: 1.2; } .action-icon-box { margin-bottom: 4px; } .glass-nav { width: 100%; bottom: 0; left: 0; transform: none; border-radius: 0; justify-content: space-around; padding: 12px 0; border-top: 1px solid #e2e8f0; gap: 0; background: white; } .scroll-content { padding-bottom: 80px; } .alert-banner { align-items: flex-start; } .btn-renew-banner { margin-top: 4px; } }
+        @media (max-width: 768px) { .sidebar { position: fixed; left: 0; top: 0; height: 100%; transform: translateX(-100%); box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1); } .sidebar.mobile-open { transform: translateX(0); } .close-sidebar, .menu-toggle { display: block; } .dashboard-wrapper { padding: 16px; } .greeting { font-size: 1.1rem; } .logout-text, .arrow-icon { display: none; } .btn-logout { padding: 8px; border-radius: 50%; aspect-ratio: 1; } .stats-section { grid-template-columns: 1fr; gap: 12px; } .stat-card { padding: 16px; } .actions-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .action-btn { flex-direction: column; text-align: center; padding: 12px 8px; gap: 8px; } .action-title { font-size: 0.8rem; line-height: 1.2; } .action-icon-box { margin-bottom: 4px; } .glass-nav { width: 100%; bottom: 0; left: 0; transform: none; border-radius: 0; justify-content: space-around; padding: 12px 0; border-top: 1px solid #e2e8f0; gap: 0; background: white; } .scroll-content { padding-bottom: 80px; } }
       `}</style>
     </div>
   );
