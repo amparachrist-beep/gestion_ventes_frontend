@@ -24,7 +24,7 @@ export default function GestionUtilisateurs({ isOnline }) {
     last_name: '',
     telephone: '',
     role: 'vendeur',
-    boutiques: [] // ✅ Tableau d'IDs
+    boutiques: [] // Tableau d'IDs pour gérer plusieurs boutiques
   });
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function GestionUtilisateurs({ isOnline }) {
         ? boutiquesRes.data
         : boutiquesRes.data?.results || boutiquesRes.data || [];
 
-      // Filtrer : Le gérant ne voit pas les admins
+      // Filtrer : Le gérant ne voit pas les admins pour éviter la confusion
       const filteredUsers = usersData.filter(user => {
         if (myRole === 'admin') return true;
         return user.profil?.role !== 'admin';
@@ -73,7 +73,7 @@ export default function GestionUtilisateurs({ isOnline }) {
       setUtilisateurs(filteredUsers);
       setBoutiques(boutiquesData);
 
-      // Pré-sélectionner la première boutique si dispo
+      // Pré-sélectionner la première boutique si aucune n'est choisie
       if (boutiquesData.length > 0 && formData.boutiques.length === 0) {
         setFormData(prev => ({ ...prev, boutiques: [boutiquesData[0].id] }));
       }
@@ -110,19 +110,20 @@ export default function GestionUtilisateurs({ isOnline }) {
     }
 
     try {
-      // ✅ Payload structuré pour le backend
+      // ✅ CORRECTION : Payload "plat" pour le nouveau Serializer
       const userData = {
         username: formData.username,
         email: formData.email,
         password: formData.password,
         first_name: formData.first_name,
         last_name: formData.last_name,
-        boutiques: formData.boutiques, // Liste des IDs envoyée à la racine
-        profil: {
-          role: formData.role,
-          telephone: formData.telephone
-        }
+        // Ces champs sont maintenant à la racine, plus dans "profil"
+        role: formData.role,
+        telephone: formData.telephone,
+        boutiques: formData.boutiques
       };
+
+      console.log("📤 Envoi données création:", userData);
 
       await usersAPI.create(userData);
 
@@ -134,14 +135,30 @@ export default function GestionUtilisateurs({ isOnline }) {
 
     } catch (err) {
       console.error('❌ Erreur création:', err);
-      // Gestion des messages d'erreur du backend
-      let msg = 'Erreur lors de la création';
+
+      // ✅ GESTION D'ERREUR DÉTAILLÉE
+      let errorMessage = 'Erreur inconnue lors de la création';
+
       if (err.response && err.response.data) {
-        if (err.response.data.detail) msg = err.response.data.detail;
-        else if (err.response.data.username) msg = `Nom d'utilisateur : ${err.response.data.username[0]}`;
-        else if (err.response.data.password) msg = `Mot de passe : ${err.response.data.password[0]}`;
+        const data = err.response.data;
+
+        // Cas 1: Message simple (ex: Quota)
+        if (data.detail) {
+            errorMessage = data.detail;
+        }
+        // Cas 2: Liste d'erreurs
+        else if (Array.isArray(data)) {
+            errorMessage = data[0];
+        }
+        // Cas 3: Erreurs par champ (ex: { username: ["Déjà pris"] })
+        else if (typeof data === 'object') {
+            const firstKey = Object.keys(data)[0];
+            const firstError = Array.isArray(data[firstKey]) ? data[firstKey][0] : data[firstKey];
+            errorMessage = `${firstKey.toUpperCase()} : ${firstError}`;
+        }
       }
-      alert('❌ ' + msg);
+
+      alert(`❌ Échec : ${errorMessage}`);
     }
   };
 
@@ -257,7 +274,7 @@ export default function GestionUtilisateurs({ isOnline }) {
                       <span>
                         {user.profil?.boutiques?.length > 0
                           ? user.profil.boutiques.map(b => b.nom).join(', ')
-                          : 'Aucune boutique'}
+                          : 'Aucune boutique assignée'}
                       </span>
                     </div>
                   </div>
@@ -474,7 +491,28 @@ export default function GestionUtilisateurs({ isOnline }) {
         .boutique-option { display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; transition: 0.2s; font-size: 0.85rem; }
         .boutique-option.selected { border-color: #6366f1; background: #eef2ff; color: #4f46e5; font-weight: 600; }
         .modal-footer { padding: 20px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 12px; position: sticky; bottom: 0; }
-    `}</style>
+        .btn-cancel { padding: 10px 20px; border: 1px solid #e2e8f0; background: white; color: #64748b; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-cancel:hover { background: #f1f5f9; color: #1e293b; }
+        .btn-submit { padding: 10px 20px; border: none; background: #4f46e5; color: white; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-submit:hover:not(:disabled) { background: #4338ca; }
+        .btn-submit:disabled { background: #9ca3af; cursor: not-allowed; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: #64748b; background: white; border-radius: 16px; border: 1px dashed #e2e8f0; }
+        .empty-icon { width: 64px; height: 64px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; color: #94a3b8; }
+        .loading-state { text-align: center; padding: 40px; color: #64748b; }
+        .spin { animation: spin 1s linear infinite; }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        @media (max-width: 640px) {
+          .page-header { flex-direction: column; align-items: flex-start; gap: 16px; padding: 16px; }
+          .header-right { width: 100%; display: flex; justify-content: flex-end; }
+          .form-row { grid-template-columns: 1fr; margin-bottom: 0; }
+          .users-grid { grid-template-columns: 1fr; }
+        }
+      `}</style>
     </div>
   );
 }
