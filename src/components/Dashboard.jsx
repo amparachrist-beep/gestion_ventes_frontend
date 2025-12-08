@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout } from '../auth';
-import { abonnementAPI, venteAPI, profilAPI } from '../api';
+// ✅ AJOUT DE dashboardAPI dans les imports
+import { abonnementAPI, venteAPI, profilAPI, dashboardAPI } from '../api';
 import { syncFull } from '../offline_sync';
 import {
   getDashboardUnifiedStats,
@@ -17,59 +18,29 @@ import {
   CheckCircle, Wifi, WifiOff, CloudUpload, Database
 } from 'lucide-react';
 
-/* ==================================================================================
-   1. COMPOSANT SYNC STATUS
-   ================================================================================== */
+// ... (Le composant SyncStatus reste identique, ne pas changer) ...
 const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }) => {
+  // ... (Garder le code de SyncStatus tel quel)
   const [showError, setShowError] = useState(false);
-
   const formatDate = (dateString) => {
     if (!dateString) return '--:--';
     return new Date(dateString).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
-
   let containerClass = "sync-widget";
   let Icon = CheckCircle;
   let label = "Synchronisé";
-
-  if (!isOnline) {
-    containerClass += " offline";
-    Icon = WifiOff;
-    label = "Hors Ligne";
-  } else if (status === 'SYNCING') {
-    containerClass += " syncing";
-    Icon = RefreshCw;
-    label = "Synchronisation...";
-  } else if (status === 'ERROR') {
-    containerClass += " error";
-    Icon = AlertCircle;
-    label = "Erreur Sync";
-  } else {
-    containerClass += " success";
-  }
+  if (!isOnline) { containerClass += " offline"; Icon = WifiOff; label = "Hors Ligne"; }
+  else if (status === 'SYNCING') { containerClass += " syncing"; Icon = RefreshCw; label = "Synchronisation..."; }
+  else if (status === 'ERROR') { containerClass += " error"; Icon = AlertCircle; label = "Erreur Sync"; }
+  else { containerClass += " success"; }
 
   return (
     <div className={containerClass}>
-      <div className="icon-box">
-        <Icon size={16} className={status === 'SYNCING' ? 'spin' : ''} />
-      </div>
-      <div className="info-box">
-        <span className="status-label">{label}</span>
-        <span className="last-sync">{formatDate(lastSync)}</span>
-      </div>
-      {pendingCount > 0 && (
-        <div className="pending-badge" title={`${pendingCount} ventes non envoyées`}>
-          <CloudUpload size={12} />
-          <span>{pendingCount}</span>
-        </div>
-      )}
-      {status === 'ERROR' && isOnline && (
-        <button className="retry-btn" onClick={onRetry} onMouseEnter={() => setShowError(true)} onMouseLeave={() => setShowError(false)}>
-          <RefreshCw size={14} />
-        </button>
-      )}
+      <div className="icon-box"><Icon size={16} className={status === 'SYNCING' ? 'spin' : ''} /></div>
+      <div className="info-box"><span className="status-label">{label}</span><span className="last-sync">{formatDate(lastSync)}</span></div>
+      {pendingCount > 0 && (<div className="pending-badge" title={`${pendingCount} ventes non envoyées`}><CloudUpload size={12} /><span>{pendingCount}</span></div>)}
+      {status === 'ERROR' && isOnline && (<button className="retry-btn" onClick={onRetry} onMouseEnter={() => setShowError(true)} onMouseLeave={() => setShowError(false)}><RefreshCw size={14} /></button>)}
       {showError && error && <div className="error-tooltip">{error}</div>}
-
       <style jsx>{`
         .sync-widget { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 30px; background: white; border: 1px solid #e2e8f0; transition: all 0.3s ease; position: relative; }
         .sync-widget.success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
@@ -91,9 +62,6 @@ const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }
   );
 };
 
-/* ==================================================================================
-   2. DASHBOARD PRINCIPAL
-   ================================================================================== */
 export default function Dashboard({ isOnline }) {
   const [unifiedStats, setUnifiedStats] = useState({
     nombre_ventes: 0,
@@ -139,39 +107,85 @@ export default function Dashboard({ isOnline }) {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
+      let statsData = {
+        nombre_ventes: 0,
+        total_montant: 0,
+        total_depenses: 0,
+        benefice: 0,
+        ventes_pending_count: 0
+      };
+
       if (isOnline) {
+        // === MODE EN LIGNE : ON UTILISE LE SERVEUR ===
         try {
-          const ventesRes = await venteAPI.list();
-          const ventesList = Array.isArray(ventesRes.data) ? ventesRes.data : (ventesRes.data.results || []);
-          await saveVentesSynced(ventesList);
+          // 1. Récupérer les vraies stats calculées par Django (views.py -> dashboard_stats)
+          const serverStatsRes = await dashboardAPI.getStats();
+          const serverData = serverStatsRes.data;
+
+          console.log("✅ Stats Serveur reçues:", serverData);
+
+          // 2. Mettre à jour les stats avec les données du serveur
+          statsData = {
+            nombre_ventes: serverData.ventes.today.count,
+            total_montant: serverData.ventes.today.total,
+            total_depenses: serverData.depenses.today,
+            benefice: serverData.benefices.today,
+            ventes_pending_count: 0 // En ligne, on suppose 0 en attente par défaut, ou on lit la DB locale
+          };
+
+          // 3. Charger l'abonnement
           if (isGerant || isAdmin) {
             const aboRes = await abonnementAPI.current();
             setAbonnement(aboRes.data);
           }
+
+          // 4. Background Sync pour garder la DB locale à jour (Optionnel mais conseillé)
+          // On ne bloque pas l'affichage pour ça
+          venteAPI.list().then(res => {
+             const ventesList = Array.isArray(res.data) ? res.data : (res.data.results || []);
+             saveVentesSynced(ventesList);
+          }).catch(err => console.warn("Background sync failed", err));
+
         } catch (err) {
-          console.warn("Mode dégradé", err);
+          console.error("Erreur chargement stats serveur:", err);
+          // Fallback vers local si le serveur plante
         }
       }
 
-      const stats = await getDashboardUnifiedStats(profil.id);
-      const depenses = await getDepensesStats();
-      const dbInfo = await getDBStats();
-      const totalDepenses = isVendeur ? 0 : (depenses.total || 0);
+      // === MODE HORS LIGNE OU FALLBACK ===
+      if (!isOnline || statsData.total_montant === 0) {
+        // Si hors ligne ou si le serveur renvoie 0 (et qu'on a peut-être des données locales)
+        const localStats = await getDashboardUnifiedStats(profil.id);
 
-      setUnifiedStats({
-        nombre_ventes: stats.nombre_ventes,
-        total_montant: stats.total_montant,
-        total_depenses: totalDepenses,
-        benefice: stats.total_montant - totalDepenses,
-        ventes_pending_count: stats.ventes_pending_count
-      });
+        // On récupère le nombre de ventes en attente de sync
+        statsData.ventes_pending_count = localStats.ventes_pending_count;
+
+        if (!isOnline) {
+            const depenses = await getDepensesStats();
+            const totalDepenses = isVendeur ? 0 : (depenses.total || 0);
+
+            statsData.nombre_ventes = localStats.nombre_ventes;
+            statsData.total_montant = localStats.total_montant;
+            statsData.total_depenses = totalDepenses;
+            statsData.benefice = localStats.total_montant - totalDepenses;
+        }
+      }
+
+      // Récupération infos DB locale pour le status sync
+      const dbInfo = await getDBStats();
+
+      setUnifiedStats(statsData);
       setDbStats(dbInfo);
+
     } catch (error) {
       console.error('Erreur chargement dashboard:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // ... (Le reste du code : handleSync, StatCard, ActionButton, JSX return...)
+  // ... Copiez le reste de votre Dashboard.jsx existant ici ...
 
   const handleSync = async () => {
     setSyncStatus('SYNCING');
@@ -217,13 +231,10 @@ export default function Dashboard({ isOnline }) {
     </Link>
   );
 
-  // Helper pour vérifier si l'abonnement est expiré
   const isAboExpired = (abo) => {
     if (!abo) return false;
-    if (abo.is_expired) return true; // Si le backend envoie cette info
-    if (abo.date_fin) {
-      return new Date(abo.date_fin) < new Date();
-    }
+    if (abo.is_expired) return true;
+    if (abo.date_fin) return new Date(abo.date_fin) < new Date();
     return false;
   };
 
@@ -398,18 +409,13 @@ export default function Dashboard({ isOnline }) {
         .dashboard-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; }
         .actions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .section-title { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 0; }
-
-        /* BANNIÈRES */
-        .alert-banner { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem; line-height: 1.5; }
+        .alert-banner { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem; line-height: 1.5; }
         .alert-banner.warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
         .alert-banner.premium { background: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; }
-        /* Nouveau style Expired */
         .alert-banner.expired { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
-
         .alert-text { flex: 1; }
-        .btn-renew-banner { background: #dc2626; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.8rem; white-space: nowrap; transition: 0.2s; }
+        .btn-renew-banner { background: #dc2626; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.8rem; white-space: nowrap; transition: 0.2s; margin-top: 4px; }
         .btn-renew-banner:hover { background: #b91c1c; }
-
         .stats-section { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
         .stat-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; align-items: center; gap: 16px; border: 1px solid #f1f5f9; transition: transform 0.2s; }
         .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }

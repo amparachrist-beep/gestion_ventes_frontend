@@ -8,6 +8,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// --- INTERCEPTEUR REQUEST (Ajout du Token) ---
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
   if (token) {
@@ -16,24 +17,32 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// --- INTERCEPTEUR RESPONSE (Gestion Refresh Token & Erreurs) ---
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    // Si erreur 401 (Non autorisé) et qu'on n'a pas déjà essayé de rafraîchir
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem('refresh_token');
         if (!refreshToken) throw new Error('No refresh token');
 
-        // Utilisez une instance axios directe pour éviter la boucle infinie
+        // Appel direct axios pour éviter la boucle infinie de l'intercepteur
         const res = await axios.post(`${API_BASE_URL}/token/refresh/`, { refresh: refreshToken });
+
         const { access } = res.data;
         localStorage.setItem('access_token', access);
+
+        // Mise à jour du header pour la requête qui a échoué
         originalRequest.headers.Authorization = `Bearer ${access}`;
+
+        // On relance la requête initiale
         return api(originalRequest);
       } catch (e) {
-        console.error('Échec du rafraîchissement du token:', e);
+        console.error('Session expirée, reconnexion requise:', e);
+        // Nettoyage complet
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
@@ -44,6 +53,10 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// ============================================================
+// 📡 DÉFINITION DES ENDPOINTS
+// ============================================================
 
 // === AUTHENTIFICATION ===
 export const authAPI = {
@@ -57,6 +70,12 @@ export const authAPI = {
   },
   verifyToken: (token) => api.post('/token/verify/', { token }),
   refreshToken: (refresh) => api.post('/token/refresh/', { refresh }),
+};
+
+// === DASHBOARD (Stats Serveur) - AJOUTÉ ✅ ===
+export const dashboardAPI = {
+  // Correspond à path('dashboard/stats/', views.dashboard_stats) dans urls.py
+  getStats: () => api.get('/dashboard/stats/'),
 };
 
 // === PROFILS ===
@@ -155,85 +174,29 @@ export const demandePaiementAPI = {
 // === RAPPORTS ===
 export const reportAPI = {
   sales: (period = 'weekly') => api.get('/reports/sales/', { params: { period } }),
-  dashboardStats: () => api.get('/stats/dashboard/'),
+  // On garde celui-ci pour compatibilité si utilisé ailleurs, mais dashboardAPI est préféré pour le dashboard
+  dashboardStats: () => api.get('/dashboard/stats/'),
   beneficesStats: (params) => api.get('/stats/benefices/', { params }),
 };
 
-// === EXPORTS ===
+// === EXPORTS (Optimisé avec Axios) ===
 export const exportAPI = {
-  clients: async (format = 'excel') => {
-    const token = localStorage.getItem('access_token');
-    const response = await fetch(
-      `${API_BASE_URL}/exports/clients/?format=${format}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
-    );
+  clients: (format = 'excel') =>
+    api.get(`/exports/clients/?format=${format}`, { responseType: 'blob' }),
 
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.status}`);
-    }
+  ventes: (format = 'excel') =>
+    api.get(`/exports/ventes/?format=${format}`, { responseType: 'blob' }),
 
-    return response.blob();
-  },
+  produits: (format = 'excel') =>
+    api.get(`/exports/produits/?format=${format}`, { responseType: 'blob' }),
 
-  ventes: async (format = 'excel') => {
-    const token = localStorage.getItem('access_token');
-    const response = await fetch(
-      `${API_BASE_URL}/exports/ventes/?format=${format}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
-    );
+  depenses: (format = 'excel') =>
+    api.get(`/exports/depenses/?format=${format}`, { responseType: 'blob' }),
 
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.status}`);
-    }
-
-    return response.blob();
-  },
-
-  produits: async (format = 'excel') => {
-    const token = localStorage.getItem('access_token');
-    const response = await fetch(
-      `${API_BASE_URL}/exports/produits/?format=${format}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.status}`);
-    }
-
-    return response.blob();
-  },
-
-  depenses: async (format = 'excel') => {
-    const token = localStorage.getItem('access_token');
-    const response = await fetch(
-      `${API_BASE_URL}/exports/depenses/?format=${format}`,
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error(`Export failed: ${response.status}`);
-    }
-
-    return response.blob();
-  },
-
-  downloadBlob: (blob, filename) => {
+  // Utilitaire pour déclencher le téléchargement navigateur
+  downloadBlob: (response, filename) => {
+    // Axios met le contenu binaire dans response.data
+    const blob = new Blob([response.data], { type: response.headers['content-type'] });
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -245,10 +208,9 @@ export const exportAPI = {
   }
 };
 
-// === CONFIGURATION GLOBALE ===
-api.defaults.timeout = 30000; // 30 secondes
+// === CONFIGURATION DEV ===
+api.defaults.timeout = 30000;
 
-// Intercepteur pour le logging des requêtes (en développement)
 if (import.meta.env.DEV) {
   api.interceptors.request.use(request => {
     console.log(`🚀 ${request.method?.toUpperCase()} ${request.url}`, request.params || '');
