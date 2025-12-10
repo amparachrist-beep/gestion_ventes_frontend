@@ -124,28 +124,38 @@ export default function HistoriqueMesVentes({ isOnline }) {
         ? `${user.first_name} ${user.last_name}`
         : user.username || 'Moi';
 
-      // ✅ ENRICHIR LES VENTES
+      // ✅ ENRICHIR CHAQUE VENTE
       return rawVentes.map(vente => {
         const produit = produitsMap[vente.produit];
         const boutique = boutiquesMap[vente.boutique];
         const client = clientsMap[vente.client];
 
-        // ✅ CALCULS
-        const prixAchat = produit ? parseFloat(produit.prix_achat) || 0 : 0;
+        // ✅ RECUPÉRATION DIRECTE DES CHIFFRES (Plus de calculs hasardeux)
         const montantTotal = parseFloat(vente.montant_total) || 0;
         const quantite = parseInt(vente.quantite) || 1;
-        const benefice = montantTotal - (prixAchat * quantite);
+
+        // On utilise la marge envoyée par le backend, sinon fallback sur calcul
+        const prixAchatTotal = parseFloat(vente.cout_achat_total) || 0;
+        const benefice = parseFloat(vente.marge_brute) || (montantTotal - prixAchatTotal);
+
+        // ✅ NOMS AFFICHÉS
+        const produitNom = produit ? produit.nom : (vente.produit_nom || 'Produit supprimé');
+        const boutiqueNom = boutique ? boutique.nom : (vente.boutique_nom || 'N/A');
+        const clientNom = client ? client.nom : (vente.client_nom || 'Client Comptoir');
 
         return {
           ...vente,
-          prix_achat: prixAchat,
+          prix_achat_unitaire: prixAchatTotal / quantite, // Juste pour l'affichage détail
           montant_total: montantTotal,
           quantite,
-          benefice,
-          produit_nom: produit ? produit.nom : 'Produit',
-          boutique_nom: boutique ? boutique.nom : 'N/A',
-          client_nom: client ? client.nom : (vente.client_nom || 'Client Comptoir'),
-          utilisateur_nom: vendeurNom
+          benefice, // ✅ C'est maintenant la valeur correcte du backend
+          produit_nom: produitNom,
+          boutique_nom: boutiqueNom,
+          client_nom: clientNom,
+          utilisateur_nom: vendeurNom,
+          produit_obj: produit,
+          boutique_obj: boutique,
+          client_obj: client
         };
       });
 
@@ -154,13 +164,13 @@ export default function HistoriqueMesVentes({ isOnline }) {
       // Fallback
       return rawVentes.map(vente => ({
         ...vente,
-        prix_achat: 0,
+        prix_achat_unitaire: 0,
         montant_total: parseFloat(vente.montant_total) || 0,
         quantite: parseInt(vente.quantite) || 1,
         benefice: 0,
         produit_nom: 'Produit',
         boutique_nom: 'Boutique',
-        client_nom: 'Client',
+        client_nom: vente.client_nom || 'Client Comptoir',
         utilisateur_nom: 'Moi'
       }));
     }
@@ -513,8 +523,8 @@ export default function HistoriqueMesVentes({ isOnline }) {
                   <span className="amount">{formatMontant(selectedVente.montant_total)}</span>
                 </div>
                 <div className="summary-row sub">
-                  <span>Coût d'achat</span>
-                  <span>- {formatMontant(selectedVente.prix_achat * selectedVente.quantite)}</span>
+                  <span>Coût d'achat estimé</span>
+                  <span>- {formatMontant(selectedVente.prix_achat_unitaire * selectedVente.quantite)}</span>
                 </div>
                 <div className="summary-row total">
                   <span>Bénéfice Net</span>

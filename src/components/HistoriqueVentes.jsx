@@ -157,30 +157,35 @@ export default function HistoriqueVentes({ isOnline }) {
         clientsMap[c.id] = c;
       });
 
+      // ✅ ENRICHIR CHAQUE VENTE
       return rawVentes.map(vente => {
         const produit = produitsMap[vente.produit];
         const boutique = boutiquesMap[vente.boutique];
         const user = usersMap[vente.utilisateur];
         const client = clientsMap[vente.client];
 
-        const prixAchat = produit ? parseFloat(produit.prix_achat) || 0 : 0;
+        // ✅ RECUPÉRATION DIRECTE DES CHIFFRES (Plus de calculs hasardeux)
         const montantTotal = parseFloat(vente.montant_total) || 0;
         const quantite = parseInt(vente.quantite) || 1;
-        const benefice = montantTotal - (prixAchat * quantite);
 
-        const produitNom = produit ? produit.nom : 'Produit supprimé';
-        const boutiqueNom = boutique ? boutique.nom : 'N/A';
+        // On utilise la marge envoyée par le backend, sinon fallback sur calcul
+        const prixAchatTotal = parseFloat(vente.cout_achat_total) || 0;
+        const benefice = parseFloat(vente.marge_brute) || (montantTotal - prixAchatTotal);
+
+        // ✅ NOMS AFFICHÉS
+        const produitNom = produit ? produit.nom : (vente.produit_nom || 'Produit supprimé');
+        const boutiqueNom = boutique ? boutique.nom : (vente.boutique_nom || 'N/A');
         const utilisateurNom = user ?
           (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.username)
-          : 'Inconnu';
+          : (vente.vendeur_nom || 'Inconnu');
         const clientNom = client ? client.nom : (vente.client_nom || 'Client Comptoir');
 
         return {
           ...vente,
-          prix_achat_unitaire: prixAchat,
+          prix_achat_unitaire: prixAchatTotal / quantite, // Juste pour l'affichage détail
           montant_total: montantTotal,
           quantite,
-          benefice,
+          benefice, // ✅ C'est maintenant la valeur correcte du backend
           produit_nom: produitNom,
           boutique_nom: boutiqueNom,
           utilisateur_nom: utilisateurNom,
