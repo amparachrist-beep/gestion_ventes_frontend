@@ -4,7 +4,8 @@ import { abonnementAPI, demandePaiementAPI, profilAPI } from '../api';
 import {
   ArrowLeft, CreditCard, CheckCircle, Users, Store,
   ShieldCheck, Zap, AlertTriangle, Info, Clock,
-  MessageCircle, Activity, Lock, RefreshCw
+  MessageCircle, Activity, Lock, RefreshCw,
+  Calendar, DollarSign, TrendingUp, FileText
 } from 'lucide-react';
 
 export default function Abonnement({ isOnline }) {
@@ -12,27 +13,40 @@ export default function Abonnement({ isOnline }) {
   const [profil, setProfil] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [stats, setStats] = useState(null);
 
   const plans = [
     {
       type: 'STANDARD',
+      nom: 'Standard',
       montant: 10000,
+      periode: 'mois',
       users: 3,
       boutiques: 1,
-      features: ['Support WhatsApp', 'Rapports de base', 'Multi-boutiques']
+      features: [
+        'Support WhatsApp',
+        'Rapports de base',
+        'Synchronisation en temps réel',
+        'Backup automatique'
+      ],
+      couleur: '#4f46e5'
     },
     {
       type: 'PREMIUM',
+      nom: 'Premium',
       montant: 15000,
+      periode: 'mois',
       users: 5,
       boutiques: 2,
       features: [
         'Support Prioritaire 24/7',
-        'Rapports avancés',
-        'Multi-boutiques illimité',
+        'Rapports avancés & Analytics',
+        'Multi-boutiques',
         'Exports Excel/PDF',
-        'Gestion des stocks avancée'
-      ]
+        'Gestion des stocks avancée',
+        'API intégration'
+      ],
+      couleur: '#10b981'
     }
   ];
 
@@ -49,31 +63,34 @@ export default function Abonnement({ isOnline }) {
 
     try {
       setError(null);
+      setLoading(true);
 
       // 1. Charger le profil utilisateur
       const profilResponse = await profilAPI.me();
       setProfil(profilResponse.data);
-      console.log('✅ Profil chargé:', profilResponse.data);
 
-      // 2. Charger l'abonnement (même pour vendeurs/caissiers)
-      try {
-        const abonnementResponse = await abonnementAPI.current();
-        console.log('✅ Réponse abonnement:', abonnementResponse.data);
+      // 2. Charger l'abonnement
+      const abonnementResponse = await abonnementAPI.current();
+      const aboData = abonnementResponse.data;
 
-        // ✅ Vérifier si c'est un vrai abonnement ou l'objet vide
-        if (abonnementResponse.data && abonnementResponse.data.type_abonnement) {
-          setAbonnement(abonnementResponse.data);
-        } else {
-          setAbonnement(null);
-        }
-      } catch (aboError) {
-        console.warn('⚠️ Erreur chargement abonnement:', aboError);
+      // Vérifier si c'est un vrai abonnement ou l'objet vide
+      if (aboData && aboData.type_abonnement) {
+        setAbonnement(aboData);
+      } else {
         setAbonnement(null);
+      }
+
+      // 3. Charger les statistiques
+      try {
+        const statsResponse = await abonnementAPI.stats();
+        setStats(statsResponse.data);
+      } catch (statsError) {
+        console.warn('⚠️ Stats non disponibles:', statsError);
       }
 
     } catch (error) {
       console.error('❌ Erreur chargement données:', error);
-      setError(error.response?.data?.detail || 'Erreur de chargement');
+      setError(error.response?.data?.detail || 'Erreur de chargement des données');
     } finally {
       setLoading(false);
     }
@@ -82,6 +99,10 @@ export default function Abonnement({ isOnline }) {
   const handleChoosePlan = async (plan) => {
     if (!isOnline) {
       alert('❌ Connexion Internet requise pour souscrire à un abonnement');
+      return;
+    }
+
+    if (!window.confirm(`Voulez-vous souscrire au plan ${plan.nom} pour ${plan.montant.toLocaleString()} FCFA/mois ?`)) {
       return;
     }
 
@@ -102,8 +123,11 @@ export default function Abonnement({ isOnline }) {
       // 3. Ouvrir WhatsApp
       if (linkResponse.data.whatsapp_url) {
         window.open(linkResponse.data.whatsapp_url, '_blank');
-        alert('✅ Demande créée! Contactez-nous sur WhatsApp pour finaliser.');
+        alert('✅ Demande créée! Contactez-nous sur WhatsApp pour finaliser le paiement.');
       }
+
+      // 4. Recharger les données après 2 secondes
+      setTimeout(loadData, 2000);
 
     } catch (error) {
       console.error('❌ Erreur souscription:', error);
@@ -111,8 +135,29 @@ export default function Abonnement({ isOnline }) {
     }
   };
 
+  const handleRenew = async () => {
+    if (!abonnement || !abonnement.id) {
+      alert('Aucun abonnement à renouveler');
+      return;
+    }
+
+    if (!window.confirm('Voulez-vous renouveler votre abonnement ?')) {
+      return;
+    }
+
+    try {
+      await abonnementAPI.renew(abonnement.id);
+      alert('✅ Abonnement renouvelé avec succès !');
+      loadData();
+    } catch (error) {
+      console.error('❌ Erreur renouvellement:', error);
+      alert('❌ Erreur lors du renouvellement: ' + (error.response?.data?.detail || error.message));
+    }
+  };
+
   const isVendeur = profil && (profil.role === 'vendeur' || profil.role === 'caissier');
   const isGerant = profil && profil.role === 'gerant';
+  const isAdmin = profil && profil.role === 'admin';
 
   if (loading) {
     return (
@@ -136,10 +181,18 @@ export default function Abonnement({ isOnline }) {
             <p className="subtitle">Gérez votre plan et vos accès</p>
           </div>
         </div>
-        <button onClick={loadData} className="btn-refresh" disabled={!isOnline}>
-          <RefreshCw size={18} />
-          <span>Actualiser</span>
-        </button>
+        <div className="header-right">
+          {stats && (
+            <div className="stats-badge">
+              <FileText size={16} />
+              <span>{stats.total_abonnements || 0} abonnement(s)</span>
+            </div>
+          )}
+          <button onClick={loadData} className="btn-refresh" disabled={!isOnline}>
+            <RefreshCw size={18} />
+            <span>Actualiser</span>
+          </button>
+        </div>
       </header>
 
       <div className="content-wrapper">
@@ -177,8 +230,8 @@ export default function Abonnement({ isOnline }) {
                 <span className="value badge">{profil.role.toUpperCase()}</span>
               </div>
               <div className="info-item">
-                <span className="label">Boutiques assignées</span>
-                <span className="value">{profil.boutiques?.length || 0}</span>
+                <span className="label">Boutique</span>
+                <span className="value">{profil.boutique?.nom || 'Non assigné'}</span>
               </div>
               <div className="info-item">
                 <span className="label">Statut Abonnement</span>
@@ -188,7 +241,7 @@ export default function Abonnement({ isOnline }) {
                   </span>
                 ) : (
                   <span className="value status-pending">
-                    <Clock size={14} /> En attente
+                    <Clock size={14} /> {abonnement?.statut === 'EXPIRE' ? 'Expiré' : 'Inactif'}
                   </span>
                 )}
               </div>
@@ -197,7 +250,14 @@ export default function Abonnement({ isOnline }) {
             {abonnement && abonnement.statut === 'ACTIF' && (
               <div className="plan-info-compact">
                 <h4>Plan actif : {abonnement.type_abonnement}</h4>
-                <p>Expire le {new Date(abonnement.date_fin).toLocaleDateString('fr-FR')}</p>
+                <div className="detail-row">
+                  <Calendar size={14} />
+                  <span>Expire le {new Date(abonnement.date_fin).toLocaleDateString('fr-FR')}</span>
+                </div>
+                <div className="detail-row">
+                  <Users size={14} />
+                  <span>{abonnement.jours_restants} jours restants</span>
+                </div>
               </div>
             )}
 
@@ -218,11 +278,22 @@ export default function Abonnement({ isOnline }) {
             {/* ABONNEMENT ACTUEL */}
             {abonnement && abonnement.statut === 'ACTIF' ? (
               <div className="current-plan-section">
-                <h2>Votre Abonnement Actuel</h2>
+                <div className="section-header">
+                  <h2>Votre Abonnement Actuel</h2>
+                  {abonnement.peut_renouveler && (
+                    <button className="btn-renew" onClick={handleRenew} disabled={!isOnline}>
+                      <RefreshCw size={16} />
+                      Renouveler
+                    </button>
+                  )}
+                </div>
+
                 <div className="card plan-card active-plan">
                   <div className="plan-header">
                     <div>
-                      <h3>Plan {abonnement.type_abonnement}</h3>
+                      <h3>
+                        {abonnement.type_abonnement === 'GRATUIT' ? 'Essai Gratuit' : `Plan ${abonnement.type_abonnement}`}
+                      </h3>
                       <span className="status-badge active">Actif</span>
                     </div>
                     <div className="icon-box green">
@@ -232,9 +303,15 @@ export default function Abonnement({ isOnline }) {
 
                   <div className="plan-details">
                     <div className="detail-row">
-                      <Clock size={16} />
+                      <Calendar size={16} />
                       <span>
                         Expire le <strong>{new Date(abonnement.date_fin).toLocaleDateString('fr-FR')}</strong>
+                      </span>
+                    </div>
+                    <div className="detail-row">
+                      <Clock size={16} />
+                      <span>
+                        <strong>{abonnement.jours_restants}</strong> jours restants
                       </span>
                     </div>
                     <div className="detail-row">
@@ -250,6 +327,27 @@ export default function Abonnement({ isOnline }) {
                       </span>
                     </div>
                   </div>
+
+                  {abonnement.est_essai_gratuit && (
+                    <div className="trial-banner">
+                      <Info size={16} />
+                      <span>Essai gratuit - Souscrivez à un plan payant avant expiration</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : abonnement && abonnement.statut === 'EXPIRE' ? (
+              <div className="alert-box danger no-plan">
+                <AlertTriangle size={24} />
+                <div>
+                  <h3>Abonnement expiré</h3>
+                  <p>
+                    Votre abonnement {abonnement.est_essai_gratuit ? 'd\'essai gratuit' : ''} a expiré le {new Date(abonnement.date_fin).toLocaleDateString('fr-FR')}.
+                    Choisissez un plan ci-dessous pour réactiver votre compte.
+                  </p>
+                  <button className="btn-renew mt-2" onClick={() => loadData()}>
+                    Vérifier le statut
+                  </button>
                 </div>
               </div>
             ) : (
@@ -259,7 +357,7 @@ export default function Abonnement({ isOnline }) {
                   <h3>Aucun abonnement actif</h3>
                   <p>
                     {isGerant
-                      ? 'Votre période d\'essai est terminée. Choisissez un plan ci-dessous pour continuer.'
+                      ? 'Choisissez un plan ci-dessous pour commencer à utiliser l\'application.'
                       : 'Vous n\'avez pas encore souscrit à un abonnement.'
                     }
                   </p>
@@ -270,22 +368,42 @@ export default function Abonnement({ isOnline }) {
             {/* PLANS DISPONIBLES */}
             <div className="plans-section">
               <h2>Choisir un plan</h2>
+              <p className="section-subtitle">
+                Tous les plans incluent les fonctionnalités de base et le support technique
+              </p>
+
               <div className="plans-grid">
                 {plans.map(plan => (
                   <div
                     key={plan.type}
                     className={`plan-card pricing ${plan.type === 'PREMIUM' ? 'featured' : ''}`}
+                    style={{ borderColor: plan.couleur }}
                   >
                     {plan.type === 'PREMIUM' && <div className="featured-tag">Populaire</div>}
 
-                    <h3>{plan.type}</h3>
+                    <div className="plan-type">
+                      <h3>{plan.nom}</h3>
+                      <span className="plan-badge" style={{ backgroundColor: plan.couleur }}>
+                        {plan.type}
+                      </span>
+                    </div>
+
                     <div className="price">
-                      {plan.montant.toLocaleString()} <span>FCFA/mois</span>
+                      {plan.montant.toLocaleString()} <span>FCFA/{plan.periode}</span>
+                    </div>
+
+                    <div className="plan-quotas">
+                      <div className="quota-item">
+                        <Users size={18} />
+                        <span>{plan.users} utilisateurs</span>
+                      </div>
+                      <div className="quota-item">
+                        <Store size={18} />
+                        <span>{plan.boutiques} boutique{plan.boutiques > 1 ? 's' : ''}</span>
+                      </div>
                     </div>
 
                     <ul className="features-list">
-                      <li><Users size={16} /> {plan.users} utilisateurs</li>
-                      <li><Store size={16} /> {plan.boutiques} boutiques</li>
                       {plan.features.map((feat, i) => (
                         <li key={i}>
                           <CheckCircle size={16} /> {feat}
@@ -295,6 +413,10 @@ export default function Abonnement({ isOnline }) {
 
                     <button
                       className={`btn-plan ${plan.type === 'PREMIUM' ? 'btn-primary' : 'btn-outline'}`}
+                      style={{
+                        backgroundColor: plan.type === 'PREMIUM' ? plan.couleur : undefined,
+                        borderColor: plan.type === 'STANDARD' ? plan.couleur : undefined
+                      }}
                       onClick={() => handleChoosePlan(plan)}
                       disabled={!isOnline}
                     >
@@ -306,13 +428,28 @@ export default function Abonnement({ isOnline }) {
             </div>
 
             {/* INFO SUPPLÉMENTAIRE */}
-            {isGerant && (
-              <div className="alert-box info mt-4">
-                <Info size={20} />
-                <p>
-                  Chaque utilisateur (vendeur ou caissier) que vous créez compte dans votre
-                  quota mensuel. Les boutiques supplémentaires sont disponibles selon votre plan.
-                </p>
+            {(isGerant || isAdmin) && (
+              <div className="info-section">
+                <div className="card info-card">
+                  <div className="card-header">
+                    <Info size={24} />
+                    <h3>Informations importantes</h3>
+                  </div>
+                  <div className="info-content">
+                    <p>
+                      • Chaque utilisateur (vendeur ou caissier) que vous créez compte dans votre quota mensuel.
+                    </p>
+                    <p>
+                      • Les boutiques supplémentaires sont disponibles selon votre plan.
+                    </p>
+                    <p>
+                      • Le renouvellement est automatique. Vous serez notifié 7 jours avant l'expiration.
+                    </p>
+                    <p>
+                      • Pour toute question, contactez-nous via WhatsApp.
+                    </p>
+                  </div>
+                </div>
               </div>
             )}
           </>
@@ -344,6 +481,24 @@ export default function Abonnement({ isOnline }) {
           display: flex;
           align-items: center;
           gap: 24px;
+        }
+
+        .header-right {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .stats-badge {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          background: #f1f5f9;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          color: #64748b;
+          font-weight: 500;
         }
 
         .back-btn {
@@ -403,6 +558,55 @@ export default function Abonnement({ isOnline }) {
           max-width: 1000px;
           margin: 40px auto;
           padding: 0 20px;
+        }
+
+        /* SECTION HEADER */
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+
+        .section-header h2 {
+          margin: 0;
+          color: #1e293b;
+          font-size: 1.25rem;
+        }
+
+        .section-subtitle {
+          color: #64748b;
+          margin-bottom: 30px;
+          font-size: 0.95rem;
+        }
+
+        /* BUTTONS */
+        .btn-renew {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 16px;
+          background: #10b981;
+          color: white;
+          border: none;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: 0.2s;
+          font-size: 0.9rem;
+        }
+
+        .btn-renew:hover:not(:disabled) {
+          background: #0da271;
+        }
+
+        .btn-renew:disabled {
+          background: #94a3b8;
+          cursor: not-allowed;
+        }
+
+        .mt-2 {
+          margin-top: 8px;
         }
 
         /* CARDS */
@@ -490,28 +694,35 @@ export default function Abonnement({ isOnline }) {
 
         .plan-info-compact {
           background: #f1f5f9;
-          padding: 12px;
-          border-radius: 8px;
-          margin: 16px 0;
+          padding: 16px;
+          border-radius: 12px;
+          margin: 20px 0;
         }
 
         .plan-info-compact h4 {
-          margin: 0 0 4px;
+          margin: 0 0 12px;
           color: #1e293b;
-          font-size: 0.95rem;
+          font-size: 1rem;
         }
 
-        .plan-info-compact p {
-          margin: 0;
-          color: #64748b;
-          font-size: 0.85rem;
+        .trial-banner {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 12px;
+          background: #fffbeb;
+          border: 1px solid #fcd34d;
+          border-radius: 8px;
+          color: #b45309;
+          font-size: 0.9rem;
+          margin-top: 20px;
         }
 
         /* PRICING CARDS */
         .plans-section h2 {
-          margin: 0 0 20px;
+          margin: 0 0 8px;
           color: #1e293b;
-          font-size: 1.25rem;
+          font-size: 1.5rem;
         }
 
         .plans-grid {
@@ -524,6 +735,7 @@ export default function Abonnement({ isOnline }) {
           text-align: center;
           position: relative;
           transition: transform 0.2s;
+          padding: 32px 24px;
         }
 
         .pricing:hover {
@@ -532,7 +744,7 @@ export default function Abonnement({ isOnline }) {
         }
 
         .pricing.featured {
-          border: 2px solid #4f46e5;
+          border: 2px solid;
         }
 
         .featured-tag {
@@ -540,26 +752,73 @@ export default function Abonnement({ isOnline }) {
           top: -12px;
           left: 50%;
           transform: translateX(-50%);
-          background: #4f46e5;
+          background: #10b981;
           color: white;
-          padding: 4px 12px;
-          border-radius: 12px;
+          padding: 4px 16px;
+          border-radius: 20px;
           font-size: 0.75rem;
           font-weight: 700;
           text-transform: uppercase;
         }
 
+        .plan-type {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 20px;
+        }
+
+        .plan-type h3 {
+          margin: 0;
+          font-size: 1.5rem;
+          color: #1e293b;
+        }
+
+        .plan-badge {
+          padding: 4px 12px;
+          border-radius: 20px;
+          color: white;
+          font-size: 0.75rem;
+          font-weight: 600;
+          text-transform: uppercase;
+        }
+
         .price {
-          font-size: 2rem;
+          font-size: 2.5rem;
           font-weight: 800;
           color: #1e293b;
           margin: 16px 0;
+          line-height: 1;
         }
 
         .price span {
           font-size: 1rem;
           color: #64748b;
           font-weight: 500;
+        }
+
+        .plan-quotas {
+          display: flex;
+          justify-content: center;
+          gap: 24px;
+          margin: 24px 0;
+          padding: 16px 0;
+          border-top: 1px solid #e2e8f0;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .quota-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 6px;
+          color: #475569;
+          font-size: 0.9rem;
+        }
+
+        .quota-item svg {
+          color: #64748b;
         }
 
         .features-list {
@@ -574,7 +833,6 @@ export default function Abonnement({ isOnline }) {
           align-items: center;
           gap: 10px;
           padding: 8px 0;
-          border-bottom: 1px solid #f1f5f9;
           color: #475569;
           font-size: 0.9rem;
         }
@@ -589,33 +847,26 @@ export default function Abonnement({ isOnline }) {
         /* BUTTONS */
         .btn-plan {
           width: 100%;
-          padding: 12px;
-          border-radius: 8px;
+          padding: 14px;
+          border-radius: 12px;
           font-weight: 600;
           cursor: pointer;
           transition: 0.2s;
-          font-size: 0.95rem;
+          font-size: 1rem;
+          border: 2px solid;
         }
 
         .btn-primary {
-          background: #4f46e5;
           color: white;
           border: none;
         }
 
         .btn-primary:hover:not(:disabled) {
-          background: #4338ca;
-        }
-
-        .btn-outline {
-          background: white;
-          border: 2px solid #e2e8f0;
-          color: #334155;
+          opacity: 0.9;
         }
 
         .btn-outline:hover:not(:disabled) {
-          border-color: #4f46e5;
-          color: #4f46e5;
+          opacity: 0.8;
         }
 
         .btn-plan:disabled {
@@ -678,9 +929,9 @@ export default function Abonnement({ isOnline }) {
           display: flex;
           align-items: flex-start;
           gap: 12px;
-          padding: 16px;
+          padding: 20px;
           border-radius: 12px;
-          margin-bottom: 20px;
+          margin-bottom: 24px;
         }
 
         .alert-box.warning {
@@ -701,18 +952,14 @@ export default function Abonnement({ isOnline }) {
           border: 1px solid #fca5a5;
         }
 
-        .alert-box h4 {
-          margin: 0 0 4px;
-          font-size: 0.95rem;
+        .alert-box h3, .alert-box h4 {
+          margin: 0 0 8px;
         }
 
         .alert-box p {
           margin: 0;
-          font-size: 0.9rem;
-        }
-
-        .mt-4 {
-          margin-top: 24px;
+          font-size: 0.95rem;
+          line-height: 1.5;
         }
 
         .no-plan {
@@ -724,9 +971,19 @@ export default function Abonnement({ isOnline }) {
           font-size: 1.1rem;
         }
 
-        .no-plan p {
-          margin: 0;
+        /* INFO SECTION */
+        .info-section {
+          margin-top: 40px;
+        }
+
+        .info-content {
+          color: #475569;
           font-size: 0.95rem;
+          line-height: 1.6;
+        }
+
+        .info-content p {
+          margin: 8px 0;
         }
 
         /* LOADING */
@@ -760,12 +1017,28 @@ export default function Abonnement({ isOnline }) {
             gap: 16px;
           }
 
+          .header-right {
+            width: 100%;
+            justify-content: space-between;
+          }
+
           .plans-grid {
             grid-template-columns: 1fr;
           }
 
           .info-grid {
             grid-template-columns: 1fr;
+          }
+
+          .section-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+
+          .btn-renew {
+            width: 100%;
+            justify-content: center;
           }
         }
       `}</style>
