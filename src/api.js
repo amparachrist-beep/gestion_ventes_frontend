@@ -74,7 +74,7 @@ export const authAPI = {
 
 // === DASHBOARD (Stats Serveur) - AJOUTÉ ✅ ===
 export const dashboardAPI = {
-  // Correspond à path('dashboard/stats/', views.dashboard_stats) dans urls.py
+  // ✅ CORRECTION : Chemin cohérent avec urls.py
   getStats: () => api.get('/dashboard/stats/'),
 };
 
