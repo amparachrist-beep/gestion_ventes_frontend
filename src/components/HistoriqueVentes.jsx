@@ -64,21 +64,18 @@ export default function HistoriqueVentes({ isOnline }) {
     setError(null);
 
     try {
-      // ✅ CONSTRUIRE LES PARAMÈTRES
       const params = {
         page,
         page_size: pageSize,
         ...filter
       };
 
-      // ✅ NETTOYER LES VALEURS VIDES
       Object.keys(params).forEach(key => {
         if (params[key] === '') delete params[key];
       });
 
       console.log('📊 Chargement historiques avec params:', params);
 
-      // ✅ OPTIMISATION : Charger uniquement ce qui est nécessaire
       const [ventesRes] = await Promise.all([
         venteAPI.list({ params })
       ]);
@@ -86,7 +83,6 @@ export default function HistoriqueVentes({ isOnline }) {
       let rawVentes = [];
       let count = 0;
 
-      // ✅ TRAITEMENT DE LA RÉPONSE
       if (ventesRes.data) {
         if (Array.isArray(ventesRes.data)) {
           rawVentes = ventesRes.data;
@@ -102,10 +98,8 @@ export default function HistoriqueVentes({ isOnline }) {
 
       console.log(`📈 ${rawVentes.length} ventes chargées`);
 
-      // ✅ ENRICHISSEMENT DES DONNÉES
       const ventesEnrichies = await enrichirVentes(rawVentes);
 
-      // ✅ TRI CHRONOLOGIQUE
       const ventesTriees = ventesEnrichies.sort((a, b) =>
         new Date(b.date_heure) - new Date(a.date_heure)
       );
@@ -127,18 +121,15 @@ export default function HistoriqueVentes({ isOnline }) {
     }
   };
 
-  // ✅ FONCTION D'ENRICHISSEMENT
   const enrichirVentes = async (rawVentes) => {
     if (!rawVentes.length) return [];
 
     try {
-      // ✅ RÉCUPÉRER LES IDS UNIQUES POUR LES JOINTURES
       const produitIds = [...new Set(rawVentes.map(v => v.produit).filter(Boolean))];
       const boutiqueIds = [...new Set(rawVentes.map(v => v.boutique).filter(Boolean))];
       const userIds = [...new Set(rawVentes.map(v => v.utilisateur).filter(Boolean))];
       const clientIds = [...new Set(rawVentes.map(v => v.client).filter(Boolean))];
 
-      // ✅ CHARGER LES DONNÉES EN PARALLÈLE
       const [produitsRes, boutiquesRes, usersRes, clientsRes] = await Promise.all([
         produitIds.length ? produitAPI.list({ params: { ids: produitIds.join(',') } }) : Promise.resolve({ data: [] }),
         boutiqueIds.length ? boutiqueAPI.list({ params: { ids: boutiqueIds.join(',') } }) : Promise.resolve({ data: [] }),
@@ -146,7 +137,6 @@ export default function HistoriqueVentes({ isOnline }) {
         clientIds.length ? clientAPI.list({ params: { ids: clientIds.join(',') } }) : Promise.resolve({ data: [] })
       ]);
 
-      // ✅ CRÉER LES MAPS POUR ACCÈS RAPIDE
       const produitsMap = {};
       (Array.isArray(produitsRes.data) ? produitsRes.data : produitsRes.data?.results || []).forEach(p => {
         produitsMap[p.id] = p;
@@ -167,20 +157,17 @@ export default function HistoriqueVentes({ isOnline }) {
         clientsMap[c.id] = c;
       });
 
-      // ✅ ENRICHIR CHAQUE VENTE
       return rawVentes.map(vente => {
         const produit = produitsMap[vente.produit];
         const boutique = boutiquesMap[vente.boutique];
         const user = usersMap[vente.utilisateur];
         const client = clientsMap[vente.client];
 
-        // ✅ CALCULS FINANCIERS
         const prixAchat = produit ? parseFloat(produit.prix_achat) || 0 : 0;
         const montantTotal = parseFloat(vente.montant_total) || 0;
         const quantite = parseInt(vente.quantite) || 1;
         const benefice = montantTotal - (prixAchat * quantite);
 
-        // ✅ NOMS AFFICHÉS
         const produitNom = produit ? produit.nom : 'Produit supprimé';
         const boutiqueNom = boutique ? boutique.nom : 'N/A';
         const utilisateurNom = user ?
@@ -207,7 +194,6 @@ export default function HistoriqueVentes({ isOnline }) {
 
     } catch (error) {
       console.error('❌ Erreur enrichissement:', error);
-      // ✅ FALLBACK : Retourner les données de base si l'enrichissement échoue
       return rawVentes.map(vente => ({
         ...vente,
         prix_achat_unitaire: 0,
@@ -253,11 +239,9 @@ export default function HistoriqueVentes({ isOnline }) {
     minute: '2-digit'
   });
 
-  // ✅ STATISTIQUES
   const totalVentes = ventes.reduce((sum, v) => sum + (v.montant_total || 0), 0);
   const totalBenefice = ventes.reduce((sum, v) => sum + (v.benefice || 0), 0);
 
-  // ✅ GÉNÉRATION DE FACTURE
   const genererFacture = (vente) => {
     const w = window.open('', '_blank');
     w.document.write(`
@@ -326,6 +310,27 @@ export default function HistoriqueVentes({ isOnline }) {
     <div className="loading-screen">
       <div className="spinner"></div>
       <p>Chargement des archives...</p>
+      <style jsx>{`
+        .loading-screen {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 80vh;
+          font-family: system-ui, -apple-system, sans-serif;
+          color: #64748b;
+        }
+        .spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid #e2e8f0;
+          border-top: 3px solid #4f46e5;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 
@@ -334,14 +339,14 @@ export default function HistoriqueVentes({ isOnline }) {
       <header className="page-header">
         <div className="header-left">
           <Link to="/dashboard" className="back-btn">
-            <ArrowLeft size={20} /><span>Dashboard</span>
+            <ArrowLeft size={20} /><span>Retour</span>
           </Link>
           <div className="title-block">
             <h1>Historique des Ventes</h1>
             <p className="subtitle">
-              <span className="total-count">{totalCount}</span> transactions au total
+              <span className="total-count">{totalCount}</span> transactions trouvées
               {currentUserRole && (
-                <span className="role-badge">{currentUserRole.toUpperCase()}</span>
+                <span className="role-badge">{currentUserRole}</span>
               )}
             </p>
           </div>
@@ -354,7 +359,6 @@ export default function HistoriqueVentes({ isOnline }) {
       </header>
 
       <div className="content-wrapper">
-        {/* ✅ MESSAGE D'ERREUR */}
         {error && (
           <div className="alert-box danger">
             <AlertCircle size={20} />
@@ -367,21 +371,27 @@ export default function HistoriqueVentes({ isOnline }) {
 
         <section className="kpi-grid">
           <div className="kpi-card purple">
-            <div className="kpi-icon"><DollarSign size={24} /></div>
+            <div className="kpi-icon-wrapper">
+                <div className="kpi-icon"><DollarSign size={24} /></div>
+            </div>
             <div className="kpi-info">
               <span className="kpi-label">Chiffre d'Affaires</span>
               <span className="kpi-value">{formatMontant(totalVentes)}</span>
             </div>
           </div>
           <div className="kpi-card green">
-            <div className="kpi-icon"><TrendingUp size={24} /></div>
+            <div className="kpi-icon-wrapper">
+                <div className="kpi-icon"><TrendingUp size={24} /></div>
+            </div>
             <div className="kpi-info">
               <span className="kpi-label">Bénéfice Net</span>
               <span className="kpi-value">{formatMontant(totalBenefice)}</span>
             </div>
           </div>
           <div className="kpi-card blue">
-            <div className="kpi-icon"><ShoppingBag size={24} /></div>
+            <div className="kpi-icon-wrapper">
+                <div className="kpi-icon"><ShoppingBag size={24} /></div>
+            </div>
             <div className="kpi-info">
               <span className="kpi-label">Volume Ventes</span>
               <span className="kpi-value">{ventes.length}</span>
@@ -417,84 +427,93 @@ export default function HistoriqueVentes({ isOnline }) {
               <Calendar size={18} className="input-icon" />
               <input type="date" name="date_fin" value={filter.date_fin} onChange={handleFilterChange} />
             </div>
-            <button className="reset-btn" onClick={resetFilters}><FilterX size={18} /></button>
-            <button className="apply-btn" onClick={applyFilters}>Appliquer</button>
+            <div className="filter-actions">
+                <button className="apply-btn" onClick={applyFilters}>Filtrer</button>
+                <button className="reset-btn" onClick={resetFilters}><FilterX size={18} /></button>
+            </div>
           </div>
         </section>
 
         <section className="table-container">
-          <table className="modern-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Date & Heure</th>
-                <th>Produit</th>
-                <th>Vendeur</th>
-                <th>Client</th>
-                <th className="text-right">Montant</th>
-                <th className="text-right">Bénéfice</th>
-                <th className="text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ventes.map(vente => (
-                <tr key={vente.id} onClick={() => { setSelectedVente(vente); setShowDetails(true); }}>
-                  <td className="col-id">#{vente.id}</td>
-                  <td className="col-date">
-                    <span className="date-main">{new Date(vente.date_heure).toLocaleDateString()}</span>
-                    <span className="date-sub">{new Date(vente.date_heure).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                  </td>
-                  <td className="col-prod">
-                    <div className="prod-cell">
-                      <div className="prod-icon"><Package size={16} /></div>
-                      <div className="prod-info">
-                        <span className="prod-name">{vente.produit_nom}</span>
-                        <span className="prod-qty">x{vente.quantite}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td><span className="badge-user">{vente.utilisateur_nom}</span></td>
-                  <td>{vente.client_nom}</td>
-                  <td className="text-right font-bold">{formatMontant(vente.montant_total)}</td>
-                  <td className="text-right">
-                    <span className={`badge-profit ${vente.benefice >= 0 ? 'pos' : 'neg'}`}>
-                      {formatMontant(vente.benefice)}
-                    </span>
-                  </td>
-                  <td className="text-center" onClick={(e) => e.stopPropagation()}>
-                    <div className="action-row">
-                      <button className="btn-action view" onClick={() => { setSelectedVente(vente); setShowDetails(true); }}>
-                        <Eye size={14} style={{marginRight: 4}} /> Voir
-                      </button>
-                      <button className="btn-action print" onClick={() => genererFacture(vente)}>
-                        <Printer size={14} style={{marginRight: 4}} /> Imprimer
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {ventes.length === 0 && !loading && (
+          <div className="table-responsive">
+            <table className="modern-table">
+              <thead>
                 <tr>
-                  <td colSpan="8" className="empty-row">
-                    <div className="empty-state">
-                      <Search size={40} />
-                      <p>Aucune vente trouvée.</p>
-                      {hasFilters && (
-                        <button className="clear-filters-btn" onClick={resetFilters}>
-                          Effacer les filtres
-                        </button>
-                      )}
-                    </div>
-                  </td>
+                  <th>ID</th>
+                  <th>Date</th>
+                  <th>Produit</th>
+                  <th>Vendeur</th>
+                  <th>Client</th>
+                  <th className="text-right">Montant</th>
+                  <th className="text-right">Bénéfice</th>
+                  <th className="text-center">Action</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ventes.map(vente => (
+                  <tr key={vente.id} onClick={() => { setSelectedVente(vente); setShowDetails(true); }}>
+                    <td className="col-id">#{vente.id}</td>
+                    <td className="col-date">
+                      <div className="date-block">
+                        <span className="date-main">{new Date(vente.date_heure).toLocaleDateString()}</span>
+                        <span className="date-sub">{new Date(vente.date_heure).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                      </div>
+                    </td>
+                    <td className="col-prod">
+                      <div className="prod-cell">
+                        <div className="prod-icon"><Package size={16} /></div>
+                        <div className="prod-info">
+                          <span className="prod-name">{vente.produit_nom}</span>
+                          <span className="prod-qty">Qté: {vente.quantite}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td><span className="badge-user">{vente.utilisateur_nom}</span></td>
+                    <td><span className="text-client">{vente.client_nom}</span></td>
+                    <td className="text-right font-bold montant-col">{formatMontant(vente.montant_total)}</td>
+                    <td className="text-right">
+                      <span className={`badge-profit ${vente.benefice >= 0 ? 'pos' : 'neg'}`}>
+                        {formatMontant(vente.benefice)}
+                      </span>
+                    </td>
+                    <td className="text-center action-col" onClick={(e) => e.stopPropagation()}>
+                      <div className="action-row">
+                        <button className="btn-icon view" title="Voir détails" onClick={() => { setSelectedVente(vente); setShowDetails(true); }}>
+                          <Eye size={16} />
+                        </button>
+                        <button className="btn-icon print" title="Imprimer" onClick={() => genererFacture(vente)}>
+                          <Printer size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {ventes.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan="8" className="empty-row">
+                      <div className="empty-state">
+                        <div className="empty-icon"><Search size={32} /></div>
+                        <p>Aucune vente trouvée.</p>
+                        {hasFilters && (
+                          <button className="clear-filters-btn" onClick={resetFilters}>
+                            Effacer les filtres
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
           {ventes.length > 0 && (
             <div className="pagination-container">
               <div className="pagination-info">
-                Affichage de <span className="highlight">{ventes.length}</span> sur <span className="highlight">{totalCount}</span>
+                <span>Page {page}</span>
+                <span className="divider">/</span>
+                <span>{Math.ceil(totalCount / pageSize) || 1}</span>
+                <span className="total-label">({totalCount} items)</span>
               </div>
               <div className="pagination-controls">
                 <button className="pagination-btn" onClick={() => setPage(1)} disabled={page === 1}>
@@ -503,7 +522,7 @@ export default function HistoriqueVentes({ isOnline }) {
                 <button className="pagination-btn" onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={page === 1}>
                   <ChevronLeft size={16} />
                 </button>
-                <span className="pagination-current">Page {page}</span>
+
                 <button className="pagination-btn" onClick={loadMore} disabled={loadingMore || ventes.length >= totalCount}>
                   <ChevronRight size={16} />
                 </button>
@@ -517,48 +536,61 @@ export default function HistoriqueVentes({ isOnline }) {
         <div className="modal-backdrop" onClick={() => setShowDetails(false)}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Détail Vente #{selectedVente.id}</h2>
+              <div className="modal-title">
+                <h2>Détail Vente</h2>
+                <span className="id-badge">#{selectedVente.id}</span>
+              </div>
               <button className="close-btn" onClick={() => setShowDetails(false)}>×</button>
             </div>
             <div className="modal-body">
-              <div className="detail-item">
-                <label>Date</label>
-                <span>{formatDate(selectedVente.date_heure)}</span>
-              </div>
-              <div className="detail-item">
-                <label>Vendeur</label>
-                <span>{selectedVente.utilisateur_nom}</span>
-              </div>
-              <div className="detail-item">
-                <label>Client</label>
-                <span>{selectedVente.client_nom}</span>
-              </div>
-              <hr />
-              <div className="detail-item highlight">
-                <label>Produit</label>
-                <span>{selectedVente.produit_nom}</span>
+              <div className="info-grid">
+                <div className="info-item">
+                    <span className="label">Date</span>
+                    <span className="value">{formatDate(selectedVente.date_heure)}</span>
+                </div>
+                <div className="info-item">
+                    <span className="label">Vendeur</span>
+                    <span className="value">{selectedVente.utilisateur_nom}</span>
+                </div>
+                <div className="info-item">
+                    <span className="label">Client</span>
+                    <span className="value">{selectedVente.client_nom}</span>
+                </div>
+                <div className="info-item">
+                    <span className="label">Boutique</span>
+                    <span className="value">{selectedVente.boutique_nom}</span>
+                </div>
               </div>
 
-              <div className="detail-grid">
-                <div className="detail-item">
-                  <label>Quantité</label>
-                  <span>{selectedVente.quantite}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Total Vente</label>
-                  <span>{formatMontant(selectedVente.montant_total)}</span>
-                </div>
+              <div className="product-card">
+                 <div className="prod-header">
+                    <Package size={20} />
+                    <span>{selectedVente.produit_nom}</span>
+                 </div>
+                 <div className="prod-details">
+                    <div className="detail-row">
+                        <span>Quantité</span>
+                        <strong>{selectedVente.quantite}</strong>
+                    </div>
+                    <div className="detail-row">
+                        <span>Prix unitaire</span>
+                        <strong>{formatMontant(selectedVente.montant_total / selectedVente.quantite)}</strong>
+                    </div>
+                 </div>
+              </div>
 
-                <div className="detail-item">
-                  <label>Coût Achat</label>
-                  <span style={{color: '#64748b'}}>
-                    - {formatMontant(selectedVente.prix_achat_unitaire * selectedVente.quantite)}
-                  </span>
+              <div className="financial-summary">
+                <div className="summary-row">
+                  <span>Total Vente</span>
+                  <span className="amount">{formatMontant(selectedVente.montant_total)}</span>
                 </div>
-
-                <div className="detail-item">
-                  <label>Bénéfice</label>
-                  <span className={`badge-profit ${selectedVente.benefice >= 0 ? 'pos' : 'neg'}`}>
+                <div className="summary-row sub">
+                  <span>Coût d'achat estimé</span>
+                  <span>- {formatMontant(selectedVente.prix_achat_unitaire * selectedVente.quantite)}</span>
+                </div>
+                <div className="summary-row total">
+                  <span>Bénéfice Net</span>
+                  <span className={`profit-val ${selectedVente.benefice >= 0 ? 'pos' : 'neg'}`}>
                     {formatMontant(selectedVente.benefice)}
                   </span>
                 </div>
@@ -574,6 +606,601 @@ export default function HistoriqueVentes({ isOnline }) {
       )}
 
       <style jsx>{`
+        /* --- VARIABLES & GLOBAL --- */
+        :global(body) {
+            background-color: #f8fafc;
+            color: #1e293b;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+        }
+
+        .page-container {
+          padding: 24px 32px;
+          max-width: 1400px;
+          margin: 0 auto;
+          min-height: 100vh;
+        }
+
+        /* --- HEADER --- */
+        .page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 32px;
+        }
+
+        .header-left {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: #64748b;
+          text-decoration: none;
+          font-size: 0.875rem;
+          font-weight: 500;
+          transition: color 0.2s;
+        }
+
+        .back-btn:hover { color: #334155; }
+
+        .title-block h1 {
+          font-size: 1.875rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0;
+          letter-spacing: -0.025em;
+        }
+
+        .subtitle {
+          color: #64748b;
+          font-size: 0.9rem;
+          margin: 4px 0 0 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .total-count {
+          color: #0f172a;
+          font-weight: 600;
+        }
+
+        .role-badge {
+          background: #e0e7ff;
+          color: #4338ca;
+          padding: 2px 8px;
+          border-radius: 999px;
+          font-size: 0.7rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .refresh-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          color: #334155;
+          padding: 10px 16px;
+          border-radius: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .refresh-btn:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+        }
+
+        /* --- KPI CARDS --- */
+        .kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 24px;
+          margin-bottom: 32px;
+        }
+
+        .kpi-card {
+          background: white;
+          padding: 24px;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+          border: 1px solid #f1f5f9;
+          transition: transform 0.2s;
+        }
+
+        .kpi-card:hover { transform: translateY(-2px); }
+
+        .kpi-icon-wrapper {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .kpi-card.purple .kpi-icon-wrapper { background: #eef2ff; color: #4f46e5; }
+        .kpi-card.green .kpi-icon-wrapper { background: #f0fdf4; color: #16a34a; }
+        .kpi-card.blue .kpi-icon-wrapper { background: #eff6ff; color: #2563eb; }
+
+        .kpi-info {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .kpi-label {
+          color: #64748b;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .kpi-value {
+          color: #0f172a;
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin-top: 4px;
+        }
+
+        /* --- FILTERS --- */
+        .filters-container {
+          background: white;
+          padding: 20px;
+          border-radius: 16px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          margin-bottom: 24px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 24px;
+          align-items: center;
+          border: 1px solid #f1f5f9;
+        }
+
+        .search-group, .date-group {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .search-group { flex: 2; }
+        .date-group { flex: 1.5; justify-content: flex-end; }
+
+        .input-wrapper {
+          position: relative;
+          flex: 1;
+          min-width: 180px;
+        }
+
+        .input-icon {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          pointer-events: none;
+        }
+
+        .input-wrapper input {
+          width: 100%;
+          padding: 10px 12px 10px 40px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          font-size: 0.9rem;
+          color: #334155;
+          background: #f8fafc;
+          transition: all 0.2s;
+          box-sizing: border-box; /* Fix width issues */
+        }
+
+        .input-wrapper input:focus {
+          outline: none;
+          background: white;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .separator { color: #94a3b8; font-size: 0.9rem; }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .apply-btn {
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .apply-btn:hover { background: #4338ca; }
+
+        .reset-btn {
+          background: #f1f5f9;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          width: 40px;
+          height: 38px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #fee2e2;
+            color: #ef4444;
+            border-color: #fecaca;
+        }
+
+        /* --- TABLE --- */
+        .table-container {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+          border: 1px solid #f1f5f9;
+          overflow: hidden;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .modern-table {
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 900px;
+        }
+
+        .modern-table th {
+          background: #f8fafc;
+          padding: 16px 24px;
+          text-align: left;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modern-table td {
+          padding: 16px 24px;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 0.9rem;
+          color: #334155;
+          vertical-align: middle;
+        }
+
+        .modern-table tbody tr {
+          cursor: pointer;
+          transition: background 0.1s;
+        }
+
+        .modern-table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .col-id {
+          font-family: 'Monaco', monospace;
+          color: #64748b;
+          font-size: 0.8rem;
+        }
+
+        .date-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .date-main { font-weight: 500; color: #1e293b; }
+        .date-sub { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+
+        .prod-cell {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .prod-icon {
+          width: 32px;
+          height: 32px;
+          background: #eef2ff;
+          border-radius: 8px;
+          color: #4f46e5;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .prod-info { display: flex; flex-direction: column; }
+        .prod-name { font-weight: 500; color: #0f172a; }
+        .prod-qty { font-size: 0.75rem; color: #64748b; }
+
+        .badge-user {
+          display: inline-block;
+          background: #f1f5f9;
+          color: #475569;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 0.8rem;
+          font-weight: 500;
+        }
+
+        .text-client { font-weight: 500; color: #334155; }
+
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .font-bold { font-weight: 600; }
+        .montant-col { color: #0f172a; }
+
+        .badge-profit {
+          display: inline-block;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 600;
+        }
+        .badge-profit.pos { background: #dcfce7; color: #166534; }
+        .badge-profit.neg { background: #fee2e2; color: #991b1b; }
+
+        .action-row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-icon.view { background: #eff6ff; color: #2563eb; }
+        .btn-icon.view:hover { background: #dbeafe; }
+
+        .btn-icon.print { background: #f1f5f9; color: #475569; }
+        .btn-icon.print:hover { background: #e2e8f0; color: #1e293b; }
+
+        /* --- EMPTY STATE --- */
+        .empty-row { padding: 40px !important; text-align: center; }
+        .empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          color: #94a3b8;
+        }
+        .empty-icon {
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 50%;
+            margin-bottom: 16px;
+        }
+        .clear-filters-btn {
+          margin-top: 16px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          color: #4f46e5;
+          padding: 8px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 500;
+        }
+
+        /* --- PAGINATION --- */
+        .pagination-container {
+          padding: 16px 24px;
+          border-top: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #fafafa;
+        }
+
+        .pagination-info {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        .pagination-info .divider { margin: 0 8px; color: #cbd5e1; }
+        .pagination-info .total-label { margin-left: 8px; color: #94a3b8; }
+
+        .pagination-controls {
+          display: flex;
+          gap: 8px;
+        }
+
+        .pagination-btn {
+          width: 36px;
+          height: 36px;
+          border: 1px solid #e2e8f0;
+          background: white;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #64748b;
+          transition: all 0.2s;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+          border-color: #4f46e5;
+          color: #4f46e5;
+          background: #eef2ff;
+        }
+
+        .pagination-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          background: #f8fafc;
+        }
+
+        /* --- MODAL --- */
+        .modal-backdrop {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(15, 23, 42, 0.6);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-card {
+          background: white;
+          width: 100%;
+          max-width: 500px;
+          border-radius: 20px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          overflow: hidden;
+          animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .modal-header {
+          padding: 24px;
+          border-bottom: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          background: #f8fafc;
+        }
+
+        .modal-title h2 { margin: 0; font-size: 1.25rem; color: #0f172a; }
+        .id-badge {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-family: monospace;
+            background: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #94a3b8;
+          cursor: pointer;
+          line-height: 1;
+        }
+
+        .modal-body { padding: 24px; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .info-item { display: flex; flex-direction: column; }
+        .info-item .label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .info-item .value { font-size: 0.95rem; color: #1e293b; font-weight: 500; }
+
+        .product-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .prod-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #4f46e5;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .prod-details {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .financial-summary {
+            background: #fff;
+            border: 1px solid #f1f5f9;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+
+        .summary-row.sub { color: #94a3b8; font-size: 0.85rem; }
+
+        .summary-row.total {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #0f172a;
+            align-items: center;
+        }
+
+        .modal-footer {
+          padding: 16px 24px;
+          background: #f8fafc;
+          border-top: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .btn-print {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: #1e293b;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .btn-print:hover { background: #0f172a; }
+
+        /* --- ALERTS --- */
         .alert-box {
           display: flex;
           align-items: center;
@@ -581,14 +1208,10 @@ export default function HistoriqueVentes({ isOnline }) {
           padding: 16px;
           border-radius: 12px;
           margin-bottom: 24px;
-        }
-
-        .alert-box.danger {
           background: #fee2e2;
           color: #991b1b;
           border: 1px solid #fca5a5;
         }
-
         .retry-btn {
           margin-left: auto;
           background: #dc2626;
@@ -600,39 +1223,12 @@ export default function HistoriqueVentes({ isOnline }) {
           font-size: 0.85rem;
         }
 
-        .retry-btn:hover {
-          background: #b91c1c;
-        }
-
-        .role-badge {
-          background: #e0e7ff;
-          color: #4338ca;
-          padding: 2px 8px;
-          border-radius: 12px;
-          font-size: 0.7rem;
-          font-weight: 600;
-          margin-left: 8px;
-          text-transform: uppercase;
-        }
-
-        .clear-filters-btn {
-          margin-top: 12px;
-          background: #4f46e5;
-          color: white;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-size: 0.85rem;
-        }
-
-        .clear-filters-btn:hover {
-          background: #4338ca;
-        }
-
-        .empty-state {
-          text-align: center;
-          padding: 40px 20px;
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .page-container { padding: 16px; }
+            .filters-container { flex-direction: column; align-items: stretch; }
+            .search-group, .date-group { flex-direction: column; width: 100%; }
+            .kpi-grid { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>

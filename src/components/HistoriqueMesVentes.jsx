@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { venteAPI, produitAPI, profilAPI, boutiqueAPI } from '../api';
+import { venteAPI, produitAPI, profilAPI, boutiqueAPI, clientAPI } from '../api';
 import {
   ArrowLeft, Search, Calendar, User, Package,
   Eye, Printer, TrendingUp, DollarSign, ShoppingBag,
-  FilterX, AlertCircle, RefreshCw
+  FilterX, AlertCircle, RefreshCw, ChevronRight
 } from 'lucide-react';
 
 export default function HistoriqueMesVentes({ isOnline }) {
@@ -189,11 +189,12 @@ export default function HistoriqueMesVentes({ isOnline }) {
   };
 
   // ✅ UTILITAIRES
-  const formatMontant = (montant) => (parseFloat(montant) || 0).toLocaleString() + ' FCFA';
+  const formatMontant = (montant) => (parseFloat(montant) || 0).toLocaleString('fr-FR') + ' FCFA';
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('fr-FR') + ' ' +
-           new Date(dateString).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+    });
   };
 
   const handleVenteClick = (vente) => { setSelectedVente(vente); setShowDetails(true); };
@@ -271,6 +272,27 @@ export default function HistoriqueMesVentes({ isOnline }) {
     <div className="loading-screen">
       <div className="spinner"></div>
       <p>Chargement de vos ventes...</p>
+      <style jsx>{`
+        .loading-screen {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 80vh;
+          font-family: system-ui, -apple-system, sans-serif;
+          color: #64748b;
+        }
+        .spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid #e2e8f0;
+          border-top: 3px solid #4f46e5;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 
@@ -279,12 +301,12 @@ export default function HistoriqueMesVentes({ isOnline }) {
       <header className="page-header">
         <div className="header-left">
           <Link to="/dashboard" className="back-btn">
-            <ArrowLeft size={20} /><span>Dashboard</span>
+            <ArrowLeft size={20} /><span>Retour</span>
           </Link>
           <div className="title-block">
-            <h1>📋 Mes Ventes</h1>
+            <h1>Mes Ventes</h1>
             <p className="subtitle">
-              <span className="total-count">{ventes.length}</span> transactions personnelles
+              <span className="total-count">{filteredVentes.length}</span> transactions personnelles
             </p>
           </div>
         </div>
@@ -296,7 +318,6 @@ export default function HistoriqueMesVentes({ isOnline }) {
       </header>
 
       <div className="content-wrapper">
-        {/* ✅ MESSAGE D'ERREUR */}
         {error && (
           <div className="alert-box danger">
             <AlertCircle size={20} />
@@ -309,25 +330,29 @@ export default function HistoriqueMesVentes({ isOnline }) {
 
         <section className="kpi-grid">
           <div className="kpi-card purple">
-            <div className="kpi-icon"><DollarSign size={24} /></div>
+            <div className="kpi-icon-wrapper">
+                <div className="kpi-icon"><DollarSign size={24} /></div>
+            </div>
             <div className="kpi-info">
-              <span className="kpi-label">Total Mes Ventes</span>
+              <span className="kpi-label">Mon C.A.</span>
               <span className="kpi-value">{formatMontant(totalVentes)}</span>
             </div>
           </div>
           <div className="kpi-card green">
-            <div className="kpi-icon"><TrendingUp size={24} /></div>
+             <div className="kpi-icon-wrapper">
+                <div className="kpi-icon"><TrendingUp size={24} /></div>
+             </div>
             <div className="kpi-info">
               <span className="kpi-label">Mon Bénéfice</span>
-              <span className={`kpi-value ${totalBenefice >= 0 ? '' : 'negative'}`}>
-                {formatMontant(totalBenefice)}
-              </span>
+              <span className="kpi-value">{formatMontant(totalBenefice)}</span>
             </div>
           </div>
           <div className="kpi-card blue">
-            <div className="kpi-icon"><ShoppingBag size={24} /></div>
+             <div className="kpi-icon-wrapper">
+                <div className="kpi-icon"><ShoppingBag size={24} /></div>
+             </div>
             <div className="kpi-info">
-              <span className="kpi-label">Nombre Ventes</span>
+              <span className="kpi-label">Transactions</span>
               <span className="kpi-value">{filteredVentes.length}</span>
             </div>
           </div>
@@ -356,77 +381,82 @@ export default function HistoriqueMesVentes({ isOnline }) {
               <Calendar size={18} className="input-icon" />
               <input type="date" name="date_fin" value={filter.date_fin} onChange={handleFilterChange} />
             </div>
-            <button className="reset-btn" onClick={resetFilters}><FilterX size={18} /></button>
-            <button className="apply-btn" onClick={() => setVentes([])}>Filtrer</button>
+            <div className="filter-actions">
+                <button className="reset-btn" onClick={resetFilters} title="Réinitialiser">
+                    <FilterX size={18} />
+                </button>
+            </div>
           </div>
         </section>
 
         <section className="table-container">
-          <table className="modern-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Date</th>
-                <th>Client</th>
-                <th>Produit</th>
-                <th>Qté</th>
-                <th className="text-right">Montant</th>
-                <th className="text-right">Bénéfice</th>
-                <th className="text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredVentes.map(vente => (
-                <tr key={vente.id} className="vente-row" onClick={() => handleVenteClick(vente)}>
-                  <td className="col-id">#{vente.id}</td>
-                  <td className="col-date">
-                    <span className="date-main">{new Date(vente.date_heure).toLocaleDateString()}</span>
-                    <span className="date-sub">{new Date(vente.date_heure).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
-                  </td>
-                  <td>{vente.client_nom}</td>
-                  <td className="col-prod">
-                    <div className="prod-cell">
-                      <div className="prod-icon"><Package size={16} /></div>
-                      <div className="prod-info">
-                        <span className="prod-name">{vente.produit_nom}</span>
-                        <span className="prod-qty">x{vente.quantite}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{vente.quantite}</td>
-                  <td className="text-right font-bold">{formatMontant(vente.montant_total)}</td>
-                  <td className="text-right">
-                    <span className={`badge-profit ${vente.benefice >= 0 ? 'pos' : 'neg'}`}>
-                      {formatMontant(vente.benefice)}
-                    </span>
-                  </td>
-                  <td className="text-center" onClick={(e) => e.stopPropagation()}>
-                    <div className="action-row">
-                      <button className="btn-action view" onClick={() => handleVenteClick(vente)}>
-                        <Eye size={14} style={{marginRight: 4}} /> Voir
-                      </button>
-                      <button className="btn-action print" onClick={() => genererFacture(vente)}>
-                        <Printer size={14} style={{marginRight: 4}} /> Facture
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredVentes.length === 0 && !loading && (
+          <div className="table-responsive">
+            <table className="modern-table">
+                <thead>
                 <tr>
-                  <td colSpan="8" className="empty-row">
-                    <div className="empty-state">
-                      <Search size={40} />
-                      <p>Aucune vente trouvée.</p>
-                      <button className="clear-filters-btn" onClick={resetFilters}>
-                        Effacer les filtres
-                      </button>
-                    </div>
-                  </td>
+                    <th>ID</th>
+                    <th>Date</th>
+                    <th>Produit</th>
+                    <th>Client</th>
+                    <th className="text-right">Montant</th>
+                    <th className="text-right">Bénéfice</th>
+                    <th className="text-center">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                {filteredVentes.map(vente => (
+                    <tr key={vente.id} onClick={() => handleVenteClick(vente)}>
+                    <td className="col-id">#{vente.id}</td>
+                    <td className="col-date">
+                        <div className="date-block">
+                            <span className="date-main">{new Date(vente.date_heure).toLocaleDateString()}</span>
+                            <span className="date-sub">{new Date(vente.date_heure).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                        </div>
+                    </td>
+                    <td className="col-prod">
+                        <div className="prod-cell">
+                        <div className="prod-icon"><Package size={16} /></div>
+                        <div className="prod-info">
+                            <span className="prod-name">{vente.produit_nom}</span>
+                            <span className="prod-qty">x{vente.quantite}</span>
+                        </div>
+                        </div>
+                    </td>
+                    <td><span className="text-client">{vente.client_nom}</span></td>
+                    <td className="text-right font-bold montant-col">{formatMontant(vente.montant_total)}</td>
+                    <td className="text-right">
+                        <span className={`badge-profit ${vente.benefice >= 0 ? 'pos' : 'neg'}`}>
+                        {formatMontant(vente.benefice)}
+                        </span>
+                    </td>
+                    <td className="text-center action-col" onClick={(e) => e.stopPropagation()}>
+                        <div className="action-row">
+                        <button className="btn-icon view" onClick={() => handleVenteClick(vente)}>
+                            <Eye size={16} />
+                        </button>
+                        <button className="btn-icon print" onClick={() => genererFacture(vente)}>
+                            <Printer size={16} />
+                        </button>
+                        </div>
+                    </td>
+                    </tr>
+                ))}
+                {filteredVentes.length === 0 && !loading && (
+                    <tr>
+                    <td colSpan="7" className="empty-row">
+                        <div className="empty-state">
+                        <div className="empty-icon"><Search size={32} /></div>
+                        <p>Aucune vente trouvée.</p>
+                        <button className="clear-filters-btn" onClick={resetFilters}>
+                            Effacer les filtres
+                        </button>
+                        </div>
+                    </td>
+                    </tr>
+                )}
+                </tbody>
+            </table>
+          </div>
         </section>
       </div>
 
@@ -434,52 +464,61 @@ export default function HistoriqueMesVentes({ isOnline }) {
         <div className="modal-backdrop" onClick={closeDetails}>
           <div className="modal-card" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Vente #{selectedVente.id}</h2>
+              <div className="modal-title">
+                  <h2>Détail Vente</h2>
+                  <span className="id-badge">#{selectedVente.id}</span>
+              </div>
               <button className="close-btn" onClick={closeDetails}>×</button>
             </div>
             <div className="modal-body">
-              <div className="detail-item">
-                <label>Date:</label>
-                <span>{formatDate(selectedVente.date_heure)}</span>
-              </div>
-              <div className="detail-item">
-                <label>Vendeur:</label>
-                <span>{selectedVente.utilisateur_nom}</span>
-              </div>
-              <div className="detail-item">
-                <label>Client:</label>
-                <span>{selectedVente.client_nom}</span>
-              </div>
-              <div className="detail-item">
-                <label>Boutique:</label>
-                <span>{selectedVente.boutique_nom}</span>
-              </div>
-              <hr />
-              <div className="detail-item highlight">
-                <label>Produit:</label>
-                <span>{selectedVente.produit_nom}</span>
+              <div className="info-grid">
+                <div className="info-item">
+                    <span className="label">Date</span>
+                    <span className="value">{formatDate(selectedVente.date_heure)}</span>
+                </div>
+                <div className="info-item">
+                    <span className="label">Vendeur</span>
+                    <span className="value">{selectedVente.utilisateur_nom}</span>
+                </div>
+                <div className="info-item">
+                    <span className="label">Client</span>
+                    <span className="value">{selectedVente.client_nom}</span>
+                </div>
+                <div className="info-item">
+                    <span className="label">Boutique</span>
+                    <span className="value">{selectedVente.boutique_nom}</span>
+                </div>
               </div>
 
-              <div className="detail-grid">
-                <div className="detail-item">
-                  <label>Quantité:</label>
-                  <span>{selectedVente.quantite}</span>
-                </div>
-                <div className="detail-item">
-                  <label>Total Vente:</label>
-                  <span>{formatMontant(selectedVente.montant_total)}</span>
-                </div>
+              <div className="product-card">
+                 <div className="prod-header">
+                    <Package size={20} />
+                    <span>{selectedVente.produit_nom}</span>
+                 </div>
+                 <div className="prod-details">
+                    <div className="detail-row">
+                        <span>Quantité</span>
+                        <strong>{selectedVente.quantite}</strong>
+                    </div>
+                    <div className="detail-row">
+                        <span>Prix unitaire</span>
+                        <strong>{formatMontant(selectedVente.montant_total / selectedVente.quantite)}</strong>
+                    </div>
+                 </div>
+              </div>
 
-                <div className="detail-item">
-                  <label>Coût Achat:</label>
-                  <span style={{color: '#64748b'}}>
-                    - {formatMontant(selectedVente.prix_achat * selectedVente.quantite)}
-                  </span>
+              <div className="financial-summary">
+                <div className="summary-row">
+                  <span>Total Vente</span>
+                  <span className="amount">{formatMontant(selectedVente.montant_total)}</span>
                 </div>
-
-                <div className="detail-item">
-                  <label>Bénéfice:</label>
-                  <span className={`badge-profit ${selectedVente.benefice >= 0 ? 'pos' : 'neg'}`}>
+                <div className="summary-row sub">
+                  <span>Coût d'achat</span>
+                  <span>- {formatMontant(selectedVente.prix_achat * selectedVente.quantite)}</span>
+                </div>
+                <div className="summary-row total">
+                  <span>Bénéfice Net</span>
+                  <span className={`profit-val ${selectedVente.benefice >= 0 ? 'pos' : 'neg'}`}>
                     {formatMontant(selectedVente.benefice)}
                   </span>
                 </div>
@@ -494,102 +533,532 @@ export default function HistoriqueMesVentes({ isOnline }) {
         </div>
       )}
 
-      {/* ✅ UTILISER LES MÊMES STYLES QUE L'HISTORIQUE VENTES */}
       <style jsx>{`
-        .page-container { min-height: 100vh; background-color: #f8fafc; color: #1e293b; font-family: 'Inter', sans-serif; padding-bottom: 40px; }
-        .loading-screen { height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #64748b; }
-        .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top-color: #4f46e5; border-radius: 50%; margin-bottom: 16px; animation: spin 1s linear infinite; }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        .page-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 20px 24px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 20; }
-        .header-left { display: flex; align-items: center; gap: 24px; }
-        .back-btn { display: flex; align-items: center; gap: 8px; color: #64748b; text-decoration: none; font-weight: 500; padding: 8px 12px; border-radius: 8px; }
-        .back-btn:hover { background: #f1f5f9; color: #1e293b; }
-        .title-block h1 { margin: 0; font-size: 1.5rem; font-weight: 700; color: #0f172a; }
-        .subtitle { margin: 4px 0 0; font-size: 0.85rem; color: #64748b; }
-        .total-count { color: #0f172a; font-weight: 600; }
-        .refresh-btn { background: #eff6ff; color: #4f46e5; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 600; display: flex; align-items: center; gap: 8px; cursor: pointer; }
-        .refresh-btn:disabled { background: #9ca3af; cursor: not-allowed; }
-        .content-wrapper { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+        /* --- VARIABLES & GLOBAL --- */
+        :global(body) {
+            background-color: #f8fafc;
+            color: #1e293b;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            margin: 0;
+        }
 
-        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .kpi-card { background: white; padding: 24px; border-radius: 16px; border: 1px solid #f1f5f9; display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 6px -2px rgba(0,0,0,0.03); position: relative; overflow: hidden; }
-        .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 6px; height: 100%; }
-        .kpi-icon { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; position: relative; z-index: 1; }
-        .kpi-info { display: flex; flex-direction: column; position: relative; z-index: 1; }
-        .kpi-label { font-size: 0.85rem; color: #64748b; font-weight: 600; margin-bottom: 4px; }
-        .kpi-value { font-size: 1.5rem; font-weight: 800; color: #1e293b; }
-        .kpi-value.negative { color: #dc2626; }
-        .kpi-card.purple .kpi-icon { background: linear-gradient(135deg, #8b5cf6, #6d28d9); } .kpi-card.purple::before { background: linear-gradient(to bottom, #8b5cf6, #6d28d9); }
-        .kpi-card.green .kpi-icon { background: linear-gradient(135deg, #10b981, #059669); } .kpi-card.green::before { background: linear-gradient(to bottom, #10b981, #059669); }
-        .kpi-card.blue .kpi-icon { background: linear-gradient(135deg, #3b82f6, #2563eb); } .kpi-card.blue::before { background: linear-gradient(to bottom, #3b82f6, #2563eb); }
+        .page-container {
+          padding: 24px 32px;
+          max-width: 1400px;
+          margin: 0 auto;
+          min-height: 100vh;
+        }
 
-        .filters-container { background: white; padding: 16px; border-radius: 16px; display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 24px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); flex-wrap: wrap; }
-        .search-group, .date-group { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-        .input-wrapper { position: relative; display: flex; align-items: center; }
-        .input-icon { position: absolute; left: 12px; color: #94a3b8; pointer-events: none; }
-        .input-wrapper input { padding: 10px 12px 10px 40px; border: 1px solid #e2e8f0; border-radius: 10px; outline: none; font-size: 0.9rem; color: #334155; width: 180px; }
-        .input-wrapper input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
-        .input-wrapper.date input { width: 140px; padding-right: 10px; }
-        .separator { color: #cbd5e1; font-weight: 600; }
-        .reset-btn, .apply-btn { height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; transition: 0.2s; }
-        .reset-btn { width: 38px; border: 1px solid #e2e8f0; background: white; color: #64748b; }
-        .reset-btn:hover { background: #fef2f2; color: #ef4444; border-color: #fee2e2; }
-        .apply-btn { background: #4f46e5; color: white; border: 1px solid #4f46e5; padding: 0 12px; }
-        .apply-btn:hover { background: #4338ca; }
+        /* --- HEADER --- */
+        .page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 32px;
+        }
 
-        .table-container { background: white; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02); overflow: hidden; border: 1px solid #f1f5f9; }
-        .modern-table { width: 100%; border-collapse: collapse; }
-        .modern-table th { background: #f8fafc; padding: 16px 20px; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; font-weight: 600; }
-        .modern-table td { padding: 16px 20px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; vertical-align: middle; }
-        .modern-table tbody tr { cursor: pointer; transition: background 0.1s; }
-        .modern-table tbody tr:hover { background: #f8fafc; }
-        .col-id { font-family: 'Monaco', monospace; color: #64748b; font-size: 0.8rem; }
-        .col-date { display: flex; flex-direction: column; }
-        .date-main { font-weight: 500; color: #334155; }
-        .date-sub { font-size: 0.75rem; color: #94a3b8; }
-        .col-prod { display: flex; align-items: center; }
-        .prod-cell { display: flex; align-items: center; gap: 12px; }
-        .prod-icon { width: 36px; height: 36px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #64748b; }
+        .header-left {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .back-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          color: #64748b;
+          text-decoration: none;
+          font-size: 0.875rem;
+          font-weight: 500;
+          transition: color 0.2s;
+        }
+
+        .back-btn:hover { color: #334155; }
+
+        .title-block h1 {
+          font-size: 1.875rem;
+          font-weight: 700;
+          color: #0f172a;
+          margin: 0;
+          letter-spacing: -0.025em;
+        }
+
+        .subtitle {
+          color: #64748b;
+          font-size: 0.9rem;
+          margin: 4px 0 0 0;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .total-count {
+          color: #0f172a;
+          font-weight: 600;
+        }
+
+        .refresh-btn {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          color: #334155;
+          padding: 10px 16px;
+          border-radius: 10px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .refresh-btn:hover:not(:disabled) {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+        }
+
+        .refresh-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* --- KPI CARDS --- */
+        .kpi-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          gap: 24px;
+          margin-bottom: 32px;
+        }
+
+        .kpi-card {
+          background: white;
+          padding: 24px;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+          border: 1px solid #f1f5f9;
+          transition: transform 0.2s;
+        }
+
+        .kpi-card:hover { transform: translateY(-2px); }
+
+        .kpi-icon-wrapper {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .kpi-card.purple .kpi-icon-wrapper { background: #eef2ff; color: #4f46e5; }
+        .kpi-card.green .kpi-icon-wrapper { background: #f0fdf4; color: #16a34a; }
+        .kpi-card.blue .kpi-icon-wrapper { background: #eff6ff; color: #2563eb; }
+
+        .kpi-info {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .kpi-label {
+          color: #64748b;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .kpi-value {
+          color: #0f172a;
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin-top: 4px;
+        }
+
+        /* --- FILTERS --- */
+        .filters-container {
+          background: white;
+          padding: 20px;
+          border-radius: 16px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          margin-bottom: 24px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 24px;
+          align-items: center;
+          border: 1px solid #f1f5f9;
+        }
+
+        .search-group, .date-group {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+
+        .search-group { flex: 2; }
+        .date-group { flex: 1.5; justify-content: flex-end; }
+
+        .input-wrapper {
+          position: relative;
+          flex: 1;
+          min-width: 180px;
+        }
+
+        .input-icon {
+          position: absolute;
+          left: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: #94a3b8;
+          pointer-events: none;
+        }
+
+        .input-wrapper input {
+          width: 100%;
+          padding: 10px 12px 10px 40px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          font-size: 0.9rem;
+          color: #334155;
+          background: #f8fafc;
+          transition: all 0.2s;
+          box-sizing: border-box;
+        }
+
+        .input-wrapper input:focus {
+          outline: none;
+          background: white;
+          border-color: #4f46e5;
+          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .separator { color: #94a3b8; font-size: 0.9rem; }
+
+        .filter-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .reset-btn {
+          background: #f1f5f9;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          width: 40px;
+          height: 38px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background: #fee2e2;
+            color: #ef4444;
+            border-color: #fecaca;
+        }
+
+        /* --- TABLE --- */
+        .table-container {
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+          border: 1px solid #f1f5f9;
+          overflow: hidden;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .modern-table {
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 900px;
+        }
+
+        .modern-table th {
+          background: #f8fafc;
+          padding: 16px 24px;
+          text-align: left;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          border-bottom: 1px solid #e2e8f0;
+        }
+
+        .modern-table td {
+          padding: 16px 24px;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 0.9rem;
+          color: #334155;
+          vertical-align: middle;
+        }
+
+        .modern-table tbody tr {
+          cursor: pointer;
+          transition: background 0.1s;
+        }
+
+        .modern-table tbody tr:hover {
+          background: #f8fafc;
+        }
+
+        .col-id {
+          font-family: 'Monaco', monospace;
+          color: #64748b;
+          font-size: 0.8rem;
+        }
+
+        .date-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .date-main { font-weight: 500; color: #1e293b; }
+        .date-sub { font-size: 0.75rem; color: #94a3b8; margin-top: 2px; }
+
+        .prod-cell {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .prod-icon {
+          width: 32px;
+          height: 32px;
+          background: #eef2ff;
+          border-radius: 8px;
+          color: #4f46e5;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
         .prod-info { display: flex; flex-direction: column; }
-        .prod-name { font-weight: 600; color: #1e293b; }
+        .prod-name { font-weight: 500; color: #0f172a; }
         .prod-qty { font-size: 0.75rem; color: #64748b; }
-        .badge-profit { padding: 4px 10px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; }
-        .badge-profit.pos { background: #dcfce7; color: #166534; }
-        .badge-profit.neg { background: #fee2e2; color: #991b1b; }
+
+        .text-client { font-weight: 500; color: #334155; }
+
         .text-right { text-align: right; }
         .text-center { text-align: center; }
-        .font-bold { font-weight: 700; color: #0f172a; }
+        .font-bold { font-weight: 600; }
+        .montant-col { color: #0f172a; }
 
-        .vente-row { cursor: pointer; }
-        .action-row { display: flex; justify-content: center; gap: 8px; }
-        .btn-action { display: flex; align-items: center; justify-content: center; padding: 6px 12px; border-radius: 6px; border: none; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .btn-action.view { background-color: #e0e7ff; color: #4338ca; }
-        .btn-action.view:hover { background-color: #4338ca; color: white; }
-        .btn-action.print { background-color: #f1f5f9; color: #334155; }
-        .btn-action.print:hover { background-color: #cbd5e1; color: #0f172a; }
+        .badge-profit {
+          display: inline-block;
+          padding: 4px 10px;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 600;
+        }
+        .badge-profit.pos { background: #dcfce7; color: #166534; }
+        .badge-profit.neg { background: #fee2e2; color: #991b1b; }
 
-        .empty-state { text-align: center; padding: 40px 20px; }
-        .clear-filters-btn { margin-top: 12px; background: #4f46e5; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; }
-        .clear-filters-btn:hover { background: #4338ca; }
+        .action-row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
 
-        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .modal-card { background: white; width: 100%; max-width: 450px; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); overflow: hidden; animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(to right, #f8fafc, #f1f5f9); }
-        .modal-header h2 { margin: 0; font-size: 1.1rem; color: #334155; font-weight: 700; }
-        .close-btn { background: none; border: none; font-size: 1.5rem; color: #94a3b8; cursor: pointer; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; transition: all 0.2s; }
-        .close-btn:hover { background: #f1f5f9; color: #64748b; }
-        .modal-body { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
-        .detail-item { display: flex; justify-content: space-between; align-items: center; }
-        .detail-item label { color: #64748b; font-size: 0.9rem; font-weight: 500; }
-        .detail-item span { font-weight: 600; color: #1e293b; }
-        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .highlight span { color: #4f46e5; font-size: 1.1rem; font-weight: 700; }
-        hr { border: 0; border-top: 1px solid #f1f5f9; margin: 4px 0; }
-        .modal-footer { padding: 20px; border-top: 1px solid #e2e8f0; background: #f8fafc; }
-        .btn-print { width: 100%; background: linear-gradient(to right, #4f46e5, #6366f1); color: white; border: none; padding: 14px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3); }
-        .btn-print:hover { background: linear-gradient(to right, #4338ca, #4f46e5); transform: translateY(-1px); box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.4); }
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
 
+        .btn-icon.view { background: #eff6ff; color: #2563eb; }
+        .btn-icon.view:hover { background: #dbeafe; }
+
+        .btn-icon.print { background: #f1f5f9; color: #475569; }
+        .btn-icon.print:hover { background: #e2e8f0; color: #1e293b; }
+
+        /* --- EMPTY STATE --- */
+        .empty-row { padding: 40px !important; text-align: center; }
+        .empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          color: #94a3b8;
+        }
+        .empty-icon {
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 50%;
+            margin-bottom: 16px;
+        }
+        .clear-filters-btn {
+          margin-top: 16px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          color: #4f46e5;
+          padding: 8px 16px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-weight: 500;
+        }
+
+        /* --- MODAL --- */
+        .modal-backdrop {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(15, 23, 42, 0.6);
+          backdrop-filter: blur(4px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 1000;
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal-card {
+          background: white;
+          width: 100%;
+          max-width: 500px;
+          border-radius: 20px;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+          overflow: hidden;
+          animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        .modal-header {
+          padding: 24px;
+          border-bottom: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          background: #f8fafc;
+        }
+
+        .modal-title h2 { margin: 0; font-size: 1.25rem; color: #0f172a; }
+        .id-badge {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-family: monospace;
+            background: #e2e8f0;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 24px;
+          color: #94a3b8;
+          cursor: pointer;
+          line-height: 1;
+        }
+
+        .modal-body { padding: 24px; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .info-item { display: flex; flex-direction: column; }
+        .info-item .label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+        .info-item .value { font-size: 0.95rem; color: #1e293b; font-weight: 500; }
+
+        .product-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .prod-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #4f46e5;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .prod-details {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .detail-row { display: flex; flex-direction: column; gap: 4px; }
+        .detail-row span { font-size: 0.8rem; color: #64748b; }
+        .detail-row strong { color: #1e293b; }
+
+        .financial-summary {
+            background: #fff;
+            border: 1px solid #f1f5f9;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #334155;
+        }
+
+        .summary-row.sub { color: #94a3b8; font-size: 0.85rem; }
+
+        .summary-row.total {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed #e2e8f0;
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #0f172a;
+            align-items: center;
+        }
+
+        .profit-val.pos { color: #16a34a; }
+        .profit-val.neg { color: #dc2626; }
+
+        .modal-footer {
+          padding: 16px 24px;
+          background: #f8fafc;
+          border-top: 1px solid #f1f5f9;
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .btn-print {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: #1e293b;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+        }
+        .btn-print:hover { background: #0f172a; }
+
+        /* --- ALERTS --- */
         .alert-box {
           display: flex;
           align-items: center;
@@ -597,14 +1066,10 @@ export default function HistoriqueMesVentes({ isOnline }) {
           padding: 16px;
           border-radius: 12px;
           margin-bottom: 24px;
-        }
-
-        .alert-box.danger {
           background: #fee2e2;
           color: #991b1b;
           border: 1px solid #fca5a5;
         }
-
         .retry-btn {
           margin-left: auto;
           background: #dc2626;
@@ -616,26 +1081,12 @@ export default function HistoriqueMesVentes({ isOnline }) {
           font-size: 0.85rem;
         }
 
-        .retry-btn:hover {
-          background: #b91c1c;
-        }
-
+        /* RESPONSIVE */
         @media (max-width: 768px) {
-          .page-header { padding: 16px; flex-direction: column; align-items: flex-start; gap: 16px; }
-          .header-right, .refresh-btn { width: 100%; justify-content: center; }
-          .filters-container { flex-direction: column; align-items: stretch; gap: 12px; }
-          .input-wrapper input { width: 100%; }
-          .modern-table thead { display: none; }
-          .modern-table, .modern-table tbody, .modern-table tr, .modern-table td { display: block; width: 100%; }
-          .modern-table tr { margin-bottom: 16px; border-radius: 12px; border: 1px solid #e2e8f0; padding: 0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-          .modern-table td { padding: 12px 16px; border: none; text-align: left; display: flex; flex-direction: column; }
-          .col-id { background: linear-gradient(to right, #f8fafc, #f1f5f9); padding: 12px 16px; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: #4f46e5; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; }
-          .col-prod { background: #f8fafc; margin: 0; padding: 16px; border-bottom: 1px solid #e2e8f0; }
-          .col-date { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; flex-direction: row; justify-content: space-between; }
-          .modern-table td:not(.col-id):not(.col-prod):not(.col-date) { position: relative; padding-left: 120px; }
-          .modern-table td:not(.col-id):not(.col-prod):not(.col-date)::before { content: attr(data-label); position: absolute; left: 16px; color: #64748b; font-weight: 500; font-size: 0.85rem; }
-          .action-row { justify-content: flex-end; margin-top: 8px; padding-top: 8px; border-top: 1px solid #f1f5f9; }
-          .btn-action { padding: 8px 16px; }
+            .page-container { padding: 16px; }
+            .filters-container { flex-direction: column; align-items: stretch; }
+            .search-group, .date-group { flex-direction: column; width: 100%; }
+            .kpi-grid { grid-template-columns: 1fr; }
         }
       `}</style>
     </div>
