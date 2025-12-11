@@ -121,6 +121,7 @@ export default function HistoriqueVentes({ isOnline }) {
     }
   };
 
+  // NOUVELLE FONCTION ENRICIRVENTES
   const enrichirVentes = async (rawVentes) => {
     if (!rawVentes.length) return [];
 
@@ -137,6 +138,7 @@ export default function HistoriqueVentes({ isOnline }) {
         clientIds.length ? clientAPI.list({ params: { ids: clientIds.join(',') } }) : Promise.resolve({ data: [] })
       ]);
 
+      // ✅ Créer les maps
       const produitsMap = {};
       (Array.isArray(produitsRes.data) ? produitsRes.data : produitsRes.data?.results || []).forEach(p => {
         produitsMap[p.id] = p;
@@ -164,28 +166,26 @@ export default function HistoriqueVentes({ isOnline }) {
         const user = usersMap[vente.utilisateur];
         const client = clientsMap[vente.client];
 
-        // ✅ RECUPÉRATION DIRECTE DES CHIFFRES (Plus de calculs hasardeux)
+        // ✅ RÉCUPÉRATION DIRECTE DES VALEURS DU BACKEND
         const montantTotal = parseFloat(vente.montant_total) || 0;
         const quantite = parseInt(vente.quantite) || 1;
-
-        // On utilise la marge envoyée par le backend, sinon fallback sur calcul
-        const prixAchatTotal = parseFloat(vente.cout_achat_total) || 0;
-        const benefice = parseFloat(vente.marge_brute) || (montantTotal - prixAchatTotal);
+        const coutAchatTotal = parseFloat(vente.cout_achat_total) || 0;
+        const benefice = parseFloat(vente.marge_brute) || (montantTotal - coutAchatTotal);
 
         // ✅ NOMS AFFICHÉS
-        const produitNom = produit ? produit.nom : (vente.produit_nom || 'Produit supprimé');
-        const boutiqueNom = boutique ? boutique.nom : (vente.boutique_nom || 'N/A');
-        const utilisateurNom = user ?
-          (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.username)
+        const produitNom = produit?.nom || vente.produit_nom || 'Produit inconnu';
+        const boutiqueNom = boutique?.nom || vente.boutique_nom || 'N/A';
+        const utilisateurNom = user
+          ? (user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : user.username)
           : (vente.vendeur_nom || 'Inconnu');
-        const clientNom = client ? client.nom : (vente.client_nom || 'Client Comptoir');
+        const clientNom = client?.nom || vente.client_nom || 'Client Comptoir';
 
         return {
           ...vente,
-          prix_achat_unitaire: prixAchatTotal / quantite, // Juste pour l'affichage détail
+          prix_achat_unitaire: quantite > 0 ? coutAchatTotal / quantite : 0,
           montant_total: montantTotal,
           quantite,
-          benefice, // ✅ C'est maintenant la valeur correcte du backend
+          benefice,
           produit_nom: produitNom,
           boutique_nom: boutiqueNom,
           utilisateur_nom: utilisateurNom,
@@ -199,17 +199,7 @@ export default function HistoriqueVentes({ isOnline }) {
 
     } catch (error) {
       console.error('❌ Erreur enrichissement:', error);
-      return rawVentes.map(vente => ({
-        ...vente,
-        prix_achat_unitaire: 0,
-        montant_total: parseFloat(vente.montant_total) || 0,
-        quantite: parseInt(vente.quantite) || 1,
-        benefice: 0,
-        produit_nom: 'Produit',
-        boutique_nom: 'Boutique',
-        utilisateur_nom: 'Vendeur',
-        client_nom: vente.client_nom || 'Client Comptoir'
-      }));
+      return rawVentes;
     }
   };
 
