@@ -11,7 +11,7 @@ import {
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-export default function HistoriqueVentes({ isOnline }) {
+export default function HistoriqueVentes({ isOnline, userRole = null }) {
   const [ventes, setVentes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -54,18 +54,25 @@ export default function HistoriqueVentes({ isOnline }) {
   const [showDetails, setShowDetails] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState('all'); // 'today', 'week', 'month', 'year', 'all'
 
-  // Charger le rôle de l'utilisateur
+  // Déterminer le rôle effectif
+  const effectiveRole = userRole !== null ? userRole : currentUserRole;
+
+  // Charger le rôle de l'utilisateur si non fourni en prop
   useEffect(() => {
-    loadCurrentUserRole();
-  }, []);
+    if (userRole === null) {
+      loadCurrentUserRole();
+    } else {
+      setCurrentUserRole(userRole);
+    }
+  }, [userRole]);
 
   // Charger les données quand les filtres changent
   useEffect(() => {
-    if (currentUserRole !== null) {
+    if (effectiveRole && (effectiveRole === 'gerant' || effectiveRole === 'admin')) {
       loadData();
       loadStatsGlobales();
     }
-  }, [isOnline, page, currentUserRole, selectedPeriod]);
+  }, [isOnline, page, effectiveRole, selectedPeriod]);
 
   // Définir la période automatiquement
   useEffect(() => {
@@ -78,7 +85,7 @@ export default function HistoriqueVentes({ isOnline }) {
       setCurrentUserRole(response.data.role);
     } catch (error) {
       console.error('Erreur chargement rôle:', error);
-      setCurrentUserRole('gerant');
+      setCurrentUserRole('gerant'); // Valeur par défaut en cas d'erreur
     }
   };
 
@@ -124,6 +131,10 @@ export default function HistoriqueVentes({ isOnline }) {
   };
 
   const loadData = useCallback(async (isLoadMore = false) => {
+    if (!effectiveRole || (effectiveRole !== 'gerant' && effectiveRole !== 'admin')) {
+      return;
+    }
+
     if (!isOnline) {
       setError('❌ Connexion Internet requise');
       setLoading(false);
@@ -215,9 +226,13 @@ export default function HistoriqueVentes({ isOnline }) {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [isOnline, page, pageSize, filter]);
+  }, [isOnline, page, pageSize, filter, effectiveRole]);
 
   const loadStatsGlobales = async () => {
+    if (!effectiveRole || (effectiveRole !== 'gerant' && effectiveRole !== 'admin')) {
+      return;
+    }
+
     try {
       const params = {
         ...filter,
@@ -361,6 +376,10 @@ export default function HistoriqueVentes({ isOnline }) {
   };
 
   const handleExport = async (format = 'excel') => {
+    if (!effectiveRole || (effectiveRole !== 'gerant' && effectiveRole !== 'admin')) {
+      return;
+    }
+
     setExporting(true);
     try {
       const params = { ...filter, format };
@@ -535,6 +554,104 @@ export default function HistoriqueVentes({ isOnline }) {
     factureWindow.document.close();
   };
 
+  // Vérification des permissions
+  if (effectiveRole === null) {
+    return (
+      <div className="loading-screen">
+        <div className="spinner"></div>
+        <p>Chargement des permissions...</p>
+        <style jsx>{`
+          .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 80vh;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #64748b;
+          }
+          .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #4f46e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+          }
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    );
+  }
+
+  if (effectiveRole !== 'gerant' && effectiveRole !== 'admin') {
+    return (
+      <div className="access-denied">
+        <div className="denied-icon">
+          <AlertCircle size={48} />
+        </div>
+        <h2>Accès Refusé</h2>
+        <p>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p>
+        <Link to="/dashboard" className="back-btn">
+          <ArrowLeft size={16} /> Retour au tableau de bord
+        </Link>
+        <style jsx>{`
+          .access-denied {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 80vh;
+            font-family: system-ui, -apple-system, sans-serif;
+            color: #64748b;
+            text-align: center;
+            padding: 20px;
+          }
+          .denied-icon {
+            width: 80px;
+            height: 80px;
+            background: #fee2e2;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            color: #ef4444;
+          }
+          h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 0 0 10px 0;
+          }
+          p {
+            margin: 0 0 20px 0;
+            max-width: 400px;
+          }
+          .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #4f46e5;
+            color: white;
+            text-decoration: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: background 0.2s;
+          }
+          .back-btn:hover {
+            background: #4338ca;
+          }
+        `}</style>
+      </div>
+    );
+  }
+
   if (loading && page === 1) {
     return (
       <div className="loading-screen">
@@ -579,9 +696,7 @@ export default function HistoriqueVentes({ isOnline }) {
             <h1>Historique des Ventes</h1>
             <p className="subtitle">
               <span className="total-count">{totalCount}</span> transactions trouvées
-              {currentUserRole && (
-                <span className="role-badge">{currentUserRole}</span>
-              )}
+              <span className="role-badge">{effectiveRole}</span>
             </p>
           </div>
         </div>
@@ -1094,6 +1209,7 @@ export default function HistoriqueVentes({ isOnline }) {
           max-width: 1400px;
           margin: 0 auto;
           min-height: 100vh;
+          font-family: system-ui, -apple-system, sans-serif;
         }
 
         /* --- HEADER --- */
@@ -1181,6 +1297,7 @@ export default function HistoriqueVentes({ isOnline }) {
           font-weight: 500;
           cursor: pointer;
           transition: background 0.2s;
+          font-size: 0.875rem;
         }
 
         .export-btn.pdf {
@@ -1212,6 +1329,7 @@ export default function HistoriqueVentes({ isOnline }) {
           font-weight: 500;
           cursor: pointer;
           transition: all 0.2s;
+          font-size: 0.875rem;
         }
 
         .refresh-btn:hover {
@@ -1461,8 +1579,8 @@ export default function HistoriqueVentes({ isOnline }) {
 
         .advanced-filters h3 {
           margin: 0 0 16px 0;
-          color: #374151;
-          font-size: 1rem;
+          font-size: 1.125rem;
+          color: #111827;
           font-weight: 600;
         }
 
@@ -1471,11 +1589,6 @@ export default function HistoriqueVentes({ isOnline }) {
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
           gap: 16px;
           margin-bottom: 16px;
-        }
-
-        .advanced-actions {
-          display: flex;
-          justify-content: flex-end;
         }
 
         .apply-advanced-btn {
@@ -1497,8 +1610,8 @@ export default function HistoriqueVentes({ isOnline }) {
         .table-container {
           background: white;
           border-radius: 12px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           overflow: hidden;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .table-responsive {
@@ -1508,137 +1621,18 @@ export default function HistoriqueVentes({ isOnline }) {
         .modern-table {
           width: 100%;
           border-collapse: collapse;
-          min-width: 1200px;
         }
 
         .modern-table th {
-          background: #f9fafb;
-          padding: 16px 20px;
+          background: #f8fafc;
+          padding: 12px 16px;
           text-align: left;
-          font-size: 0.75rem;
           font-weight: 600;
-          color: #6b7280;
+          color: #475569;
+          font-size: 0.75rem;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          border-bottom: 1px solid #e5e7eb;
-          white-space: nowrap;
-        }
-
-        .modern-table td {
-          padding: 16px 20px;
-          border-bottom: 1px solid #f3f4f6;
-          font-size: 0.875rem;
-          color: #374151;
-          vertical-align: middle;
-        }
-
-        .modern-table tbody tr {
-          cursor: pointer;
-          transition: background 0.1s;
-        }
-
-        .modern-table tbody tr:hover {
-          background: #f9fafb;
-        }
-
-        .vente-row {
-          border-left: 3px solid transparent;
-        }
-
-        .vente-row:hover {
-          border-left-color: #4f46e5;
-        }
-
-        /* Colonnes spécifiques */
-        .col-id .id-badge {
-          display: inline-block;
-          background: #f3f4f6;
-          color: #6b7280;
-          padding: 4px 8px;
-          border-radius: 4px;
-          font-family: 'Monaco', 'Menlo', monospace;
-          font-size: 0.75rem;
-          font-weight: 600;
-        }
-
-        .date-block {
-          display: flex;
-          flex-direction: column;
-        }
-
-        .date-main {
-          font-weight: 500;
-          color: #111827;
-        }
-
-        .date-sub {
-          font-size: 0.75rem;
-          color: #9ca3af;
-          margin-top: 2px;
-        }
-
-        .prod-cell {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-        }
-
-        .prod-icon {
-          width: 36px;
-          height: 36px;
-          background: #f3f0ff;
-          border-radius: 8px;
-          color: #8b5cf6;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-
-        .prod-info {
-          display: flex;
-          flex-direction: column;
-          min-width: 0;
-        }
-
-        .prod-name {
-          font-weight: 500;
-          color: #111827;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        .prod-price {
-          font-size: 0.75rem;
-          color: #6b7280;
-          margin-top: 2px;
-        }
-
-        .col-qty .qty-badge {
-          display: inline-block;
-          background: #dbeafe;
-          color: #1e40af;
-          padding: 4px 10px;
-          border-radius: 999px;
-          font-weight: 600;
-          font-size: 0.875rem;
-        }
-
-        .badge-user {
-          display: inline-block;
-          background: #f3f4f6;
-          color: #4b5563;
-          padding: 4px 10px;
-          border-radius: 6px;
-          font-size: 0.75rem;
-          font-weight: 500;
-          white-space: nowrap;
-        }
-
-        .text-client {
-          font-weight: 500;
-          color: #374151;
+          border-bottom: 1px solid #e2e8f0;
           white-space: nowrap;
         }
 
@@ -1650,53 +1644,142 @@ export default function HistoriqueVentes({ isOnline }) {
           text-align: center;
         }
 
+        .modern-table td {
+          padding: 12px 16px;
+          border-bottom: 1px solid #f1f5f9;
+          font-size: 0.875rem;
+          color: #475569;
+        }
+
+        .vente-row {
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+
+        .vente-row:hover {
+          background: #f8fafc;
+        }
+
+        .col-id .id-badge {
+          background: #f1f5f9;
+          color: #64748b;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-family: 'Monaco', 'Courier New', monospace;
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+
+        .date-block {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .date-main {
+          color: #1e293b;
+          font-weight: 500;
+        }
+
+        .date-sub {
+          color: #64748b;
+          font-size: 0.75rem;
+        }
+
+        .prod-cell {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .prod-icon {
+          color: #64748b;
+          opacity: 0.7;
+        }
+
+        .prod-info {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .prod-name {
+          color: #1e293b;
+          font-weight: 500;
+        }
+
+        .prod-price {
+          color: #64748b;
+          font-size: 0.75rem;
+        }
+
+        .qty-badge {
+          background: #dbeafe;
+          color: #1d4ed8;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-weight: 600;
+        }
+
+        .badge-user {
+          background: #f0f9ff;
+          color: #0369a1;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 0.8rem;
+        }
+
+        .text-client {
+          color: #475569;
+          font-weight: 500;
+        }
+
         .montant-display, .cout-display, .benefice-display, .marge-display {
           display: flex;
           flex-direction: column;
           align-items: flex-end;
         }
 
-        .montant-value, .cout-value, .benefice-value, .marge-value {
-          font-weight: 600;
-          white-space: nowrap;
-        }
-
-        .montant-col .montant-value {
-          color: #111827;
-        }
-
-        .cout-col .cout-value {
-          color: #6b7280;
-          font-size: 0.875rem;
-        }
-
-        .benefice-display.positive .benefice-value {
+        .montant-value {
           color: #059669;
+          font-weight: 600;
         }
 
-        .benefice-display.negative .benefice-value {
+        .cout-value {
+          color: #64748b;
+        }
+
+        .benefice-value.positive {
+          color: #059669;
+          font-weight: 600;
+        }
+
+        .benefice-value.negative {
           color: #dc2626;
+          font-weight: 600;
         }
 
         .marge-value.positive {
           color: #059669;
+          font-weight: 600;
         }
 
         .marge-value.negative {
           color: #dc2626;
+          font-weight: 600;
         }
 
         .action-row {
           display: flex;
-          justify-content: center;
           gap: 8px;
+          justify-content: center;
         }
 
         .btn-icon {
+          background: none;
+          border: 1px solid #e2e8f0;
+          color: #64748b;
           width: 32px;
           height: 32px;
           border-radius: 6px;
-          border: none;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1704,222 +1787,174 @@ export default function HistoriqueVentes({ isOnline }) {
           transition: all 0.2s;
         }
 
-        .btn-icon.view {
-          background: #dbeafe;
-          color: #1e40af;
+        .btn-icon:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
         }
 
-        .btn-icon.view:hover {
-          background: #bfdbfe;
+        .btn-icon.view {
+          color: #3b82f6;
         }
 
         .btn-icon.print {
-          background: #f3f4f6;
-          color: #4b5563;
+          color: #8b5cf6;
         }
 
-        .btn-icon.print:hover {
-          background: #e5e7eb;
-        }
-
-        /* --- ÉTAT VIDE --- */
         .empty-row {
-          padding: 60px 20px !important;
-          text-align: center;
+          padding: 48px 16px;
         }
 
         .empty-state {
           display: flex;
           flex-direction: column;
           align-items: center;
-          color: #9ca3af;
-          max-width: 400px;
-          margin: 0 auto;
+          gap: 12px;
+          color: #94a3b8;
         }
 
         .empty-icon {
-          background: #f3f4f6;
-          padding: 20px;
-          border-radius: 50%;
-          margin-bottom: 16px;
-          color: #9ca3af;
-        }
-
-        .empty-state p {
-          margin: 8px 0 16px;
-          color: #6b7280;
+          opacity: 0.5;
         }
 
         .clear-filters-btn {
-          background: white;
-          border: 1px solid #d1d5db;
-          color: #4f46e5;
+          background: #4f46e5;
+          color: white;
+          border: none;
           padding: 8px 16px;
           border-radius: 6px;
           cursor: pointer;
-          font-weight: 500;
-          transition: all 0.2s;
+          transition: background 0.2s;
         }
 
         .clear-filters-btn:hover {
-          background: #f3f4f6;
-          border-color: #9ca3af;
+          background: #4338ca;
         }
 
         /* --- PAGINATION --- */
         .pagination-container {
-          padding: 16px 20px;
-          border-top: 1px solid #e5e7eb;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: #f9fafb;
+          padding: 16px;
+          border-top: 1px solid #e2e8f0;
+          background: #f8fafc;
         }
 
         .pagination-info {
-          font-size: 0.875rem;
-          color: #6b7280;
           display: flex;
           align-items: center;
           gap: 4px;
+          color: #64748b;
+          font-size: 0.875rem;
         }
 
-        .pagination-info .divider {
+        .divider {
           margin: 0 4px;
-          color: #d1d5db;
         }
 
-        .pagination-info .total-label {
+        .total-label {
           margin-left: 8px;
-          color: #9ca3af;
+          color: #94a3b8;
         }
 
         .pagination-controls {
           display: flex;
-          gap: 8px;
+          gap: 4px;
         }
 
         .pagination-btn {
+          background: white;
+          border: 1px solid #e2e8f0;
+          color: #64748b;
           width: 36px;
           height: 36px;
-          border: 1px solid #d1d5db;
-          background: white;
           border-radius: 6px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          color: #6b7280;
           transition: all 0.2s;
         }
 
         .pagination-btn:hover:not(:disabled) {
-          border-color: #9ca3af;
-          background: #f3f4f6;
+          background: #f1f5f9;
+          border-color: #cbd5e1;
         }
 
         .pagination-btn:disabled {
           opacity: 0.5;
           cursor: not-allowed;
-          background: #f9fafb;
         }
 
-        /* --- MODAL --- */
+        /* --- MODAL DÉTAILS --- */
         .modal-backdrop {
           position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(4px);
+          inset: 0;
+          background: rgba(0,0,0,0.5);
           display: flex;
           align-items: center;
           justify-content: center;
           z-index: 1000;
           padding: 20px;
-          animation: fadeIn 0.2s ease-out;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
         }
 
         .modal-card {
           background: white;
+          border-radius: 12px;
           width: 100%;
           max-width: 600px;
-          border-radius: 12px;
-          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-          overflow: hidden;
-          animation: slideUp 0.3s ease-out;
           max-height: 90vh;
-          display: flex;
-          flex-direction: column;
+          overflow-y: auto;
+          animation: modalSlide 0.3s ease-out;
         }
 
-        @keyframes slideUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
+        @keyframes modalSlide {
+          from {
+            opacity: 0;
+            transform: translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .modal-header {
-          padding: 20px;
-          border-bottom: 1px solid #e5e7eb;
           display: flex;
           justify-content: space-between;
-          align-items: flex-start;
-          background: #f9fafb;
+          align-items: center;
+          padding: 20px;
+          border-bottom: 1px solid #e2e8f0;
         }
 
         .modal-title {
           display: flex;
-          flex-direction: column;
-          gap: 4px;
+          align-items: center;
+          gap: 12px;
         }
 
         .modal-title h2 {
           margin: 0;
           font-size: 1.25rem;
-          color: #111827;
-          font-weight: 600;
-        }
-
-        .modal-header .id-badge {
-          font-size: 0.75rem;
-          color: #6b7280;
-          background: #e5e7eb;
-          padding: 2px 8px;
-          border-radius: 4px;
-          font-family: monospace;
+          color: #1e293b;
         }
 
         .close-btn {
           background: none;
           border: none;
           font-size: 24px;
-          color: #9ca3af;
+          color: #94a3b8;
           cursor: pointer;
-          line-height: 1;
-          padding: 0;
-          width: 24px;
-          height: 24px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border-radius: 4px;
-          transition: background 0.2s;
+          padding: 4px;
+          transition: color 0.2s;
         }
 
         .close-btn:hover {
-          background: #e5e7eb;
+          color: #64748b;
         }
 
         .modal-body {
           padding: 20px;
-          overflow-y: auto;
-          flex: 1;
         }
 
         .info-grid {
@@ -1932,175 +1967,147 @@ export default function HistoriqueVentes({ isOnline }) {
         .info-item {
           display: flex;
           flex-direction: column;
+          gap: 4px;
         }
 
-        .info-item .label {
+        .label {
+          color: #64748b;
           font-size: 0.75rem;
-          color: #6b7280;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          margin-bottom: 4px;
-          font-weight: 600;
         }
 
-        .info-item .value {
-          font-size: 0.95rem;
-          color: #111827;
+        .value {
+          color: #1e293b;
           font-weight: 500;
         }
 
         .product-card {
-          background: #f9fafb;
+          background: #f8fafc;
           border-radius: 8px;
           padding: 16px;
           margin-bottom: 24px;
-          border: 1px solid #e5e7eb;
         }
 
         .prod-header {
           display: flex;
           align-items: center;
-          gap: 12px;
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #e5e7eb;
-        }
-
-        .prod-header svg {
-          color: #8b5cf6;
+          gap: 8px;
+          margin-bottom: 12px;
+          color: #475569;
         }
 
         .prod-title {
-          font-size: 1rem;
           font-weight: 600;
-          color: #111827;
+          color: #1e293b;
         }
 
         .prod-details {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 8px;
         }
 
         .detail-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-        }
-
-        .detail-row span {
-          color: #6b7280;
-          font-size: 0.875rem;
-        }
-
-        .detail-row strong {
-          color: #111827;
-          font-size: 0.95rem;
-          font-weight: 600;
+          color: #475569;
         }
 
         .financial-summary {
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 20px;
-          margin-bottom: 20px;
+          border-top: 1px solid #e2e8f0;
+          padding-top: 16px;
         }
 
         .summary-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 12px;
-          font-size: 0.95rem;
+          padding: 8px 0;
+          color: #475569;
         }
 
         .summary-row.sub {
-          color: #6b7280;
+          color: #64748b;
           font-size: 0.875rem;
         }
 
         .summary-row.total {
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 2px solid #e5e7eb;
-          font-weight: 700;
-          font-size: 1.1rem;
-          color: #111827;
+          border-top: 1px solid #e2e8f0;
+          margin-top: 8px;
+          padding-top: 12px;
+          font-weight: 600;
+          color: #1e293b;
         }
 
         .summary-row.marge {
-          margin-top: 8px;
-          font-size: 0.875rem;
+          margin-top: 4px;
         }
 
-        .summary-row .amount {
+        .amount {
           font-weight: 600;
         }
 
-        .summary-row.total .benefice.positive {
+        .amount.total-vente {
           color: #059669;
         }
 
-        .summary-row.total .benefice.negative {
+        .amount.cout-achat {
           color: #dc2626;
         }
 
-        .marge-value.positive {
+        .amount.benefice.positive {
           color: #059669;
-          font-weight: 600;
         }
 
-        .marge-value.negative {
+        .amount.benefice.negative {
           color: #dc2626;
-          font-weight: 600;
         }
 
         .notes-section {
-          background: #f9fafb;
-          border-radius: 8px;
+          margin-top: 24px;
           padding: 16px;
-          border: 1px solid #e5e7eb;
+          background: #f8fafc;
+          border-radius: 8px;
         }
 
         .notes-section h4 {
           margin: 0 0 8px 0;
-          color: #111827;
+          color: #475569;
           font-size: 0.875rem;
-          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
         }
 
         .notes-section p {
           margin: 0;
-          color: #6b7280;
+          color: #64748b;
           font-size: 0.875rem;
           line-height: 1.5;
         }
 
         .modal-footer {
-          padding: 20px;
-          border-top: 1px solid #e5e7eb;
           display: flex;
-          justify-content: flex-end;
           gap: 12px;
-          background: #f9fafb;
+          padding: 20px;
+          border-top: 1px solid #e2e8f0;
         }
 
-        .btn-print, .btn-close {
-          padding: 10px 20px;
+        .btn-print {
+          flex: 1;
+          background: #4f46e5;
+          color: white;
+          border: none;
+          padding: 12px;
           border-radius: 8px;
           font-weight: 500;
           cursor: pointer;
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
-          transition: all 0.2s;
-        }
-
-        .btn-print {
-          background: #4f46e5;
-          color: white;
-          border: none;
+          transition: background 0.2s;
         }
 
         .btn-print:hover {
@@ -2108,13 +2115,20 @@ export default function HistoriqueVentes({ isOnline }) {
         }
 
         .btn-close {
-          background: white;
-          border: 1px solid #d1d5db;
-          color: #374151;
+          flex: 1;
+          background: #f1f5f9;
+          color: #64748b;
+          border: 1px solid #e2e8f0;
+          padding: 12px;
+          border-radius: 8px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
         }
 
         .btn-close:hover {
-          background: #f3f4f6;
+          background: #e2e8f0;
+          border-color: #cbd5e1;
         }
 
         /* --- ALERTES --- */
@@ -2124,46 +2138,52 @@ export default function HistoriqueVentes({ isOnline }) {
           gap: 12px;
           padding: 16px;
           border-radius: 8px;
-          margin-bottom: 20px;
-          background: #fef2f2;
+          margin-bottom: 24px;
+          font-size: 0.875rem;
+        }
+
+        .alert-box.danger {
+          background: #fee2e2;
           color: #991b1b;
           border: 1px solid #fecaca;
         }
 
-        .alert-box.danger svg {
-          color: #dc2626;
-        }
-
         .retry-btn {
           margin-left: auto;
-          background: #dc2626;
+          background: #ef4444;
           color: white;
           border: none;
           padding: 6px 12px;
           border-radius: 6px;
+          font-size: 0.75rem;
           cursor: pointer;
-          font-size: 0.875rem;
-          font-weight: 500;
           transition: background 0.2s;
         }
 
         .retry-btn:hover {
-          background: #b91c1c;
+          background: #dc2626;
         }
 
         /* --- RESPONSIVE --- */
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
           .page-container {
             padding: 16px;
           }
 
+          .kpi-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 768px) {
           .page-header {
             flex-direction: column;
-            align-items: stretch;
+            align-items: flex-start;
             gap: 16px;
           }
 
           .header-right {
+            width: 100%;
             justify-content: flex-start;
           }
 
@@ -2171,73 +2191,27 @@ export default function HistoriqueVentes({ isOnline }) {
             grid-template-columns: 1fr;
           }
 
-          .quick-filters {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 12px;
-          }
-
-          .period-buttons {
-            justify-content: center;
-          }
-
           .search-group, .date-group {
             flex-direction: column;
-            width: 100%;
-          }
-
-          .input-wrapper {
-            width: 100%;
-          }
-
-          .filter-actions {
-            width: 100%;
-          }
-
-          .apply-btn, .reset-btn {
-            flex: 1;
-          }
-
-          .info-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .modal-card {
-            max-height: 95vh;
-          }
-        }
-
-        @media (max-width: 640px) {
-          .header-actions {
-            flex-wrap: wrap;
-          }
-
-          .export-btn, .refresh-btn {
-            flex: 1;
-            justify-content: center;
+            align-items: stretch;
           }
 
           .advanced-grid {
             grid-template-columns: 1fr;
           }
 
-          .pagination-container {
-            flex-direction: column;
-            gap: 12px;
-            align-items: stretch;
+          .modal-card {
+            margin: 20px;
           }
+        }
 
-          .pagination-controls {
-            justify-content: center;
+        @media (max-width: 640px) {
+          .info-grid {
+            grid-template-columns: 1fr;
           }
 
           .modal-footer {
             flex-direction: column;
-          }
-
-          .btn-print, .btn-close {
-            width: 100%;
-            justify-content: center;
           }
         }
       `}</style>

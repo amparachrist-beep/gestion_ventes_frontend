@@ -72,9 +72,8 @@ export const authAPI = {
   refreshToken: (refresh) => api.post('/token/refresh/', { refresh }),
 };
 
-// === DASHBOARD (Stats Serveur) - AJOUTÉ ✅ ===
+// === DASHBOARD (Stats Serveur) ===
 export const dashboardAPI = {
-  // ✅ CORRECTION : Chemin cohérent avec urls.py
   getStats: () => api.get('/dashboard/stats/'),
 };
 
@@ -92,6 +91,8 @@ export const userAPI = {
   update: (id, data) => api.put(`/users/${id}/`, data),
   delete: (id) => api.delete(`/users/${id}/`),
   quota: () => api.get('/users/quota/'),
+  debugInfo: () => api.get('/users/debug_info/'),
+  disponibles: () => api.get('/users/disponibles/'),
 };
 
 // === BOUTIQUES ===
@@ -118,7 +119,44 @@ export const venteAPI = {
   list: (config = {}) => api.get('/ventes/', config),
   get: (id) => api.get(`/ventes/${id}/`),
   create: (data) => api.post('/ventes/', data),
+  update: (id, data) => api.put(`/ventes/${id}/`, data),
+  delete: (id) => api.delete(`/ventes/${id}/`),
   sync: (ventes) => api.post('/sync-ventes/', { ventes }),
+
+  // Statistiques de ventes
+  stats: (params = {}) => api.get('/ventes/stats_benefices/', { params }),
+
+  // Historique des ventes (pour compatibilité)
+  historique: (params = {}) => api.get('/ventes/historique/', { params }),
+
+  // Export des ventes
+  exportVentes: (format = 'excel') =>
+    api.get(`/exports/ventes/?format=${format}`, { responseType: 'blob' }),
+};
+
+// === HISTORIQUE VENTES (NOUVEAU) ===
+export const historiqueAPI = {
+  // Historique complet pour gérant/admin
+  complet: (params = {}) => api.get('/historique-complet/', { params }),
+
+  // Historique personnel pour vendeur/caissier
+  personnel: (params = {}) => api.get('/historique-mes-ventes/', { params }),
+
+  // Action d'historique complet
+  historiqueComplet: (params = {}) => api.get('/historique-complet/historique_complet/', { params }),
+
+  // Statistiques pour le dashboard historique (gérant)
+  statsGerant: (params = {}) => api.get('/historique-complet/stats/', { params }),
+
+  // Statistiques personnelles vendeur
+  statsVendeur: () => api.get('/historique-mes-ventes/mes_stats/'),
+
+  // Export historique
+  export: (format = 'excel', params = {}) =>
+    api.get(`/exports/historique/?format=${format}`, {
+      params,
+      responseType: 'blob'
+    }),
 };
 
 // === CLIENTS ===
@@ -161,6 +199,8 @@ export const entreeMarchandiseAPI = {
 export const abonnementAPI = {
   current: () => api.get('/abonnements/current/'),
   list: () => api.get('/abonnements/'),
+  stats: () => api.get('/abonnements/stats/'),
+  renouveler: (id, data) => api.post(`/abonnements/${id}/renouveler/`, data),
 };
 
 // === DEMANDES DE PAIEMENT ===
@@ -174,7 +214,6 @@ export const demandePaiementAPI = {
 // === RAPPORTS ===
 export const reportAPI = {
   sales: (period = 'weekly') => api.get('/reports/sales/', { params: { period } }),
-  // On garde celui-ci pour compatibilité si utilisé ailleurs, mais dashboardAPI est préféré pour le dashboard
   dashboardStats: () => api.get('/dashboard/stats/'),
   beneficesStats: (params) => api.get('/stats/benefices/', { params }),
 };
@@ -193,6 +232,13 @@ export const exportAPI = {
   depenses: (format = 'excel') =>
     api.get(`/exports/depenses/?format=${format}`, { responseType: 'blob' }),
 
+  // Export historique spécifique
+  historique: (format = 'excel', params = {}) =>
+    api.get(`/exports/historique/?format=${format}`, {
+      params,
+      responseType: 'blob'
+    }),
+
   // Utilitaire pour déclencher le téléchargement navigateur
   downloadBlob: (response, filename) => {
     // Axios met le contenu binaire dans response.data
@@ -205,6 +251,63 @@ export const exportAPI = {
     link.click();
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
+  }
+};
+
+// === UTILITAIRES DE DÉBOGAGE ===
+export const debugAPI = {
+  testPermissions: () => api.get('/test-permissions/'),
+  debugBoutiques: () => api.get('/debug-boutiques/'),
+  testAccesVendeur: () => api.get('/test-acces-vendeur/'),
+  testVentes: () => api.get('/test-ventes/'),
+  checkHistorique: () => api.get('/check-historique/'),
+};
+
+// === FONCTIONS UTILITAIRES ===
+export const utils = {
+  // Gestion des erreurs API
+  handleApiError: (error, defaultMessage = "Une erreur est survenue") => {
+    if (error.response) {
+      const { data, status } = error.response;
+      switch (status) {
+        case 400:
+          return data.detail || data.message || "Données invalides";
+        case 401:
+          return "Session expirée, veuillez vous reconnecter";
+        case 403:
+          return "Accès refusé. Vous n'avez pas les permissions nécessaires";
+        case 404:
+          return "Ressource non trouvée";
+        case 500:
+          return "Erreur serveur interne";
+        default:
+          return data.detail || defaultMessage;
+      }
+    } else if (error.request) {
+      return "Pas de réponse du serveur. Vérifiez votre connexion internet.";
+    } else {
+      return error.message || defaultMessage;
+    }
+  },
+
+  // Téléchargement de fichier
+  downloadFile: (response, filename) => {
+    const blob = new Blob([response.data], { type: response.headers['content-type'] });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  },
+
+  // Formatage des dates pour les requêtes
+  formatDateForAPI: (date) => {
+    if (!date) return null;
+    if (typeof date === 'string') return date;
+    return date.toISOString().split('T')[0];
   }
 };
 
