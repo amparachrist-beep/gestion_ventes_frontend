@@ -168,28 +168,42 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
       // Appeler l'API avec les paramètres optimisés
       const response = await venteAPI.historique({ params });
 
-      let rawVentes = [];
-      let count = 0;
-      let stats = {};
+    let rawVentes = [];
+    let count = 0;
+    let stats = {};
 
-      // Traiter la réponse selon le format
-      if (response.data) {
-        if (Array.isArray(response.data)) {
-          rawVentes = response.data;
-          count = response.data.length;
-        } else if (response.data.results) {
-          rawVentes = response.data.results;
-          count = response.data.count || 0;
-          stats = response.data.stats || {};
-        } else if (response.data.ventes) {
-          rawVentes = response.data.ventes;
-          count = response.data.count || 0;
-          stats = response.data.stats || {};
-        } else {
-          rawVentes = response.data;
-          count = response.data.length || 0;
-        }
+    console.log('📦 Réponse API brute:', response.data);
+
+    if (response.data) {
+      // Cas 1: Réponse paginée standard Django REST
+      if (response.data.results !== undefined) {
+        rawVentes = response.data.results;
+        count = response.data.count || rawVentes.length;
+        stats = response.data.stats || {};
       }
+      // Cas 2: Array direct
+      else if (Array.isArray(response.data)) {
+        rawVentes = response.data;
+        count = rawVentes.length;
+      }
+      // Cas 3: Objet avec clé 'ventes'
+      else if (response.data.ventes) {
+        rawVentes = response.data.ventes;
+        count = response.data.count || rawVentes.length;
+        stats = response.data.stats || {};
+      }
+      // Cas 4: Fallback - traiter comme un objet unique
+      else if (typeof response.data === 'object' && !Array.isArray(response.data)) {
+        rawVentes = [response.data];
+        count = 1;
+      }
+    }
+
+    console.log(`📈 ${rawVentes.length} ventes chargées, count total: ${count}`);
+    console.log('📊 Stats reçues:', stats);
+
+    console.log(`📈 ${rawVentes.length} ventes chargées, count total: ${count}`);
+    console.log('📊 Stats reçues:', stats);
 
       console.log(`📈 ${rawVentes.length} ventes chargées`);
 
