@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { produitAPI, boutiqueAPI, profilAPI } from '../api'; // Ajout de profilAPI
+import { produitAPI, boutiqueAPI, profilAPI } from '../api';
 import { useScanDetection } from '../hooks/useScanDetection';
 import {
-  Package, Plus, Search, Barcode, Trash2,
+  Package, Plus, Search, Barcode, Trash2, Edit, // Ajout de Edit
   AlertCircle, CheckCircle, X, LayoutGrid,
-  TrendingUp, DollarSign, Archive, ArrowLeft
+  TrendingUp, DollarSign, ArrowLeft
 } from 'lucide-react';
 
 // =====================================================
@@ -164,6 +164,7 @@ export default function Produits({ isOnline }) {
   const [boutiques, setBoutiques] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null); // Pour savoir si on modifie
 
   const [formData, setFormData] = useState({
     nom: '',
@@ -171,7 +172,8 @@ export default function Produits({ isOnline }) {
     prix_achat: '',
     prix: '',
     quantite: '',
-    code_barre: ''
+    code_barre: '',
+    boutique: ''
   });
 
   const [message, setMessage] = useState('');
@@ -200,13 +202,12 @@ export default function Produits({ isOnline }) {
 
   // --- CHARGEMENT ---
   useEffect(() => {
-    // On ne charge les données que si on a la permission
     if (isOnline && hasPermission) {
       loadData();
     } else if (!isOnline) {
       setLoading(false);
     }
-  }, [isOnline, hasPermission]); // Ajout de hasPermission aux dépendances
+  }, [isOnline, hasPermission]);
 
   const loadData = async (search = '') => {
     setLoading(true);
@@ -221,7 +222,8 @@ export default function Produits({ isOnline }) {
       const boutiquesData = boutiquesRes.data.results || boutiquesRes.data || [];
       setBoutiques(boutiquesData);
 
-      if (boutiquesData.length > 0 && formData.boutique === undefined) {
+      // Initialiser la boutique par défaut
+      if (boutiquesData.length > 0 && !formData.boutique) {
         setFormData(prev => ({ ...prev, boutique: boutiquesData[0].id }));
       }
     } catch (error) {
@@ -242,6 +244,27 @@ export default function Produits({ isOnline }) {
     setSearchTerm(term);
   };
 
+  const resetForm = () => {
+    setFormData({ nom: '', description: '', prix_achat: '', prix: '', quantite: '', code_barre: '', boutique: boutiques[0]?.id });
+    setEditingId(null);
+    setShowModal(false);
+  };
+
+  // Préparer la modification
+  const handleEdit = (produit) => {
+    setEditingId(produit.id);
+    setFormData({
+      nom: produit.nom,
+      description: produit.description || '',
+      prix_achat: produit.prix_achat,
+      prix: produit.prix,
+      quantite: produit.quantite,
+      code_barre: produit.code_barre || '',
+      boutique: produit.boutique // Assurez-vous que l'API renvoie l'ID ou l'objet boutique
+    });
+    setShowModal(true);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isOnline) return showMessage('❌ Connexion requise', 'error');
@@ -255,24 +278,30 @@ export default function Produits({ isOnline }) {
       prix_achat: parseFloat(formData.prix_achat),
       prix: parseFloat(formData.prix),
       quantite: parseInt(formData.quantite) || 0,
-      boutique: boutiques[0]?.id
+      boutique: formData.boutique || boutiques[0]?.id
     };
 
     try {
-      await produitAPI.create(payload);
-      showMessage('✅ Produit ajouté au stock');
-      setFormData({ nom: '', description: '', prix_achat: '', prix: '', quantite: '', code_barre: '' });
-      setShowModal(false);
+      if (editingId) {
+        // Mode Modification
+        await produitAPI.update(editingId, payload);
+        showMessage('✅ Produit modifié avec succès');
+      } else {
+        // Mode Création
+        await produitAPI.create(payload);
+        showMessage('✅ Produit ajouté au stock');
+      }
+      resetForm();
       loadData(searchTerm);
     } catch (error) {
       console.error(error);
-      showMessage('❌ Erreur création', 'error');
+      showMessage('❌ Erreur lors de l\'enregistrement', 'error');
     }
   };
 
   const handleDelete = async (id) => {
     if (!isOnline) return showMessage('Connexion requise', 'error');
-    if (!window.confirm('Supprimer définitivement ce produit ?')) return;
+    if (!window.confirm('Voulez-vous vraiment supprimer ce produit ?')) return;
 
     try {
       await produitAPI.delete(id);
@@ -320,7 +349,7 @@ export default function Produits({ isOnline }) {
             <p className="subtitle">{filteredProduits.length} références</p>
           </div>
         </div>
-        <button className="btn-add" onClick={() => setShowModal(true)} disabled={!isOnline}>
+        <button className="btn-add" onClick={() => { resetForm(); setShowModal(true); }} disabled={!isOnline}>
           <Plus size={20} />
           <span className="btn-text">Nouveau Produit</span>
         </button>
@@ -368,13 +397,7 @@ export default function Produits({ isOnline }) {
                   <div className="icon-box">
                     <Package size={24} />
                   </div>
-                  <div className="card-actions">
-                    {isOnline && (
-                      <button className="btn-icon delete" onClick={() => handleDelete(item.id)}>
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
+                  {/* Plus de bouton supprimer ici */}
                 </div>
 
                 <div className="card-info">
@@ -401,6 +424,18 @@ export default function Produits({ isOnline }) {
                     </span>
                   </div>
                 </div>
+
+                {/* --- NOUVEAUX BOUTONS D'ACTION EN BAS DE CARTE --- */}
+                {isOnline && (
+                  <div className="card-actions-footer">
+                    <button className="btn-action edit" onClick={() => handleEdit(item)}>
+                      <Edit size={16} /> Modifier
+                    </button>
+                    <button className="btn-action delete" onClick={() => handleDelete(item.id)}>
+                      <Trash2 size={16} /> Supprimer
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -409,11 +444,11 @@ export default function Produits({ isOnline }) {
 
       {/* --- MODAL FORMULAIRE --- */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="modal-overlay" onClick={resetForm}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>Ajouter un Produit</h2>
-              <button className="close-modal" onClick={() => setShowModal(false)}><X size={24}/></button>
+              <h2>{editingId ? 'Modifier Produit' : 'Ajouter un Produit'}</h2>
+              <button className="close-modal" onClick={resetForm}><X size={24}/></button>
             </div>
 
             <form onSubmit={handleSubmit} className="modal-form">
@@ -479,8 +514,10 @@ export default function Produits({ isOnline }) {
               </div>
 
               <div className="modal-footer">
-                <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>Annuler</button>
-                <button type="submit" className="btn-submit">Enregistrer</button>
+                <button type="button" className="btn-cancel" onClick={resetForm}>Annuler</button>
+                <button type="submit" className="btn-submit">
+                  {editingId ? 'Mettre à jour' : 'Enregistrer'}
+                </button>
               </div>
             </form>
           </div>
@@ -655,22 +692,6 @@ export default function Produits({ isOnline }) {
           justify-content: center;
           color: #64748b;
         }
-        .btn-icon.delete {
-          background: #fef2f2;
-          color: #ef4444;
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          border: none;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          transition: 0.2s;
-        }
-        .btn-icon.delete:hover {
-          background: #fee2e2;
-        }
 
         .card-info {
           padding: 16px;
@@ -753,6 +774,42 @@ export default function Produits({ isOnline }) {
         }
         .loss {
           color: #ef4444;
+        }
+
+        /* ACTIONS FOOTER (Nouveau) */
+        .card-actions-footer {
+          display: flex;
+          border-top: 1px solid #e2e8f0;
+        }
+        .btn-action {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 12px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          border: none;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .btn-action.edit {
+          background: white;
+          color: #475569;
+          border-right: 1px solid #e2e8f0;
+        }
+        .btn-action.edit:hover {
+          background: #f8fafc;
+          color: #1e293b;
+        }
+        .btn-action.delete {
+          background: #fff5f5;
+          color: #e53e3e;
+        }
+        .btn-action.delete:hover {
+          background: #fee2e2;
+          color: #c53030;
         }
 
         /* MODAL */
@@ -989,13 +1046,15 @@ export default function Produits({ isOnline }) {
 
           .product-card {
             flex-direction: row;
+            flex-wrap: wrap; /* Ajout pour que le footer passe en dessous */
             align-items: center;
-            padding: 12px;
+            padding: 0; /* padding géré par les sous-éléments */
           }
 
           .card-top {
-            padding: 0;
-            margin-right: 12px;
+            padding: 12px;
+            margin-right: 0;
+            width: auto;
           }
 
           .icon-box {
@@ -1004,12 +1063,16 @@ export default function Produits({ isOnline }) {
           }
 
           .card-info {
-            padding: 0;
+            padding: 12px 0;
             flex: 1;
           }
 
           .card-pricing {
             display: none;
+          }
+
+          .card-actions-footer {
+            width: 100%; /* Prend toute la largeur sur mobile */
           }
 
           .badges {
