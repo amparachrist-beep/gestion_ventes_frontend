@@ -1,13 +1,182 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { fournisseurAPI, boutiqueAPI } from '../api';
+import { fournisseurAPI, boutiqueAPI, profilAPI } from '../api'; // Ajout de profilAPI
 import {
   ArrowLeft, Search, Plus, Store, Trash2, Edit2,
   User, Phone, Mail, MapPin, Truck, Home, ShoppingCart,
   Package, Users, Loader, CheckCircle, AlertCircle, Info, X
 } from 'lucide-react';
 
+// =====================================================
+// 🔒 COMPOSANT DE VÉRIFICATION DE PERMISSION
+// À utiliser dans toutes vos pages protégées
+// =====================================================
+
+/**
+ * Hook personnalisé pour vérifier les permissions
+ */
+export const usePermissionCheck = (requiredRoles = ['gerant', 'admin']) => {
+  const [loading, setLoading] = useState(true);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    checkPermission();
+  }, []);
+
+  const checkPermission = async () => {
+    try {
+      const response = await profilAPI.me();
+      const role = response.data.role;
+      setUserRole(role);
+      setHasPermission(requiredRoles.includes(role));
+    } catch (error) {
+      console.error('Erreur vérification permission:', error);
+      setHasPermission(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { loading, hasPermission, userRole };
+};
+
+/**
+ * Composant d'écran de chargement
+ */
+export const LoadingScreen = () => (
+  <div className="loading-screen">
+    <div className="spinner"></div>
+    <p>Vérification des permissions...</p>
+    <style jsx>{`
+      .loading-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 80vh;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #64748b;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top: 3px solid #4f46e5;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 15px;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
+
+/**
+ * Composant d'accès refusé
+ */
+export const AccessDenied = ({ userRole, requiredRoles = ['gérant', 'admin'] }) => (
+  <div className="access-denied">
+    <div className="denied-icon">
+      <AlertCircle size={48} />
+    </div>
+    <h2>Accès Refusé</h2>
+    <p>
+      Cette page nécessite les permissions: <strong>{requiredRoles.join(', ')}</strong>
+    </p>
+    {userRole && (
+      <p className="role-info">Votre rôle actuel: <strong>{userRole}</strong></p>
+    )}
+    <Link to="/dashboard" className="back-btn-denied">
+      <ArrowLeft size={16} /> Retour au tableau de bord
+    </Link>
+    <style jsx>{`
+      .access-denied {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 80vh;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #64748b;
+        text-align: center;
+        padding: 20px;
+      }
+      .denied-icon {
+        width: 80px;
+        height: 80px;
+        background: #fee2e2;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        color: #ef4444;
+      }
+      h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0 0 10px 0;
+      }
+      p {
+        margin: 0 0 10px 0;
+        max-width: 400px;
+      }
+      .role-info {
+        color: #64748b;
+        font-size: 0.875rem;
+        margin-bottom: 20px;
+      }
+      .back-btn-denied {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #4f46e5;
+        color: white;
+        text-decoration: none;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: background 0.2s;
+      }
+      .back-btn-denied:hover {
+        background: #4338ca;
+      }
+    `}</style>
+  </div>
+);
+
+/**
+ * HOC (Higher Order Component) pour protéger les pages
+ */
+export const withPermission = (Component, requiredRoles = ['gerant', 'admin']) => {
+  return (props) => {
+    const { loading, hasPermission, userRole } = usePermissionCheck(requiredRoles);
+
+    if (loading) {
+      return <LoadingScreen />;
+    }
+
+    if (!hasPermission) {
+      return <AccessDenied userRole={userRole} requiredRoles={requiredRoles} />;
+    }
+
+    return <Component {...props} userRole={userRole} />;
+  };
+};
+
+// =====================================================
+// FIN DU COMPOSANT DE VÉRIFICATION
+// =====================================================
+
 export default function Fournisseur({ isOnline }) {
+  // --- 1. VÉRIFICATION PERMISSION ---
+  const { loading: checkingPermissions, hasPermission, userRole } = usePermissionCheck(['gerant', 'admin']);
+
   const [fournisseurs, setFournisseurs] = useState([]);
   const [boutiques, setBoutiques] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,9 +196,17 @@ export default function Fournisseur({ isOnline }) {
   const [messageType, setMessageType] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
+  // --- 2. CHARGEMENT DES DONNÉES ---
   useEffect(() => {
-    loadData();
-  }, [isOnline, searchTerm]);
+    // On charge les données uniquement si on a la permission
+    if (!checkingPermissions && hasPermission) {
+      loadData();
+    } else if (!isOnline && !checkingPermissions) {
+      // Fallback si hors ligne : on essaie de charger quand même (pour le cache local)
+      // même si la vérif de permission en ligne a échoué.
+      loadData();
+    }
+  }, [isOnline, searchTerm, checkingPermissions, hasPermission]);
 
   const loadData = async () => {
     if (!isOnline) {
@@ -143,6 +320,11 @@ export default function Fournisseur({ isOnline }) {
       (f.email && f.email.includes(searchTerm))
     );
   }, [fournisseurs, searchTerm, isOnline]);
+
+  // --- 3. RENDER PERMISSION ---
+  if (checkingPermissions) return <LoadingScreen />;
+  // Si on est en ligne et qu'on n'a pas la permission, on bloque
+  if (!hasPermission && isOnline) return <AccessDenied userRole={userRole} />;
 
   return (
     <div className="page-container">
