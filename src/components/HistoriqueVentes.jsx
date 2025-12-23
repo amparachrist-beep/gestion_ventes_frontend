@@ -963,12 +963,12 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
                   <th>Date</th>
                   <th>Produit</th>
                   <th>Qté</th>
-                  <th>Vendeur</th>
-                  <th>Client</th>
+                  <th className="hide-on-mobile">Vendeur</th>
+                  <th className="hide-on-mobile">Client</th>
                   <th className="text-right">Montant</th>
-                  <th className="text-right">Coût</th>
-                  <th className="text-right">Bénéfice</th>
-                  <th className="text-right">Marge</th>
+                  <th className="text-right hide-on-mobile">Coût</th>
+                  <th className="text-right hide-on-mobile">Bénéfice</th>
+                  <th className="text-right hide-on-mobile">Marge</th>
                   <th className="text-center">Actions</th>
                 </tr>
               </thead>
@@ -993,7 +993,7 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
                         <div className="prod-icon"><Package size={16} /></div>
                         <div className="prod-info">
                           <span className="prod-name">{vente.produit_nom}</span>
-                          <span className="prod-price">
+                          <span className="prod-price hide-on-mobile">
                             {formatMontant(vente.prix_unitaire)}/u
                           </span>
                         </div>
@@ -1002,10 +1002,10 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
                     <td className="col-qty">
                       <span className="qty-badge">{vente.quantite}</span>
                     </td>
-                    <td className="col-vendeur">
+                    <td className="col-vendeur hide-on-mobile">
                       <span className="badge-user">{vente.utilisateur_nom}</span>
                     </td>
-                    <td className="col-client">
+                    <td className="col-client hide-on-mobile">
                       <span className="text-client">{vente.client_nom}</span>
                     </td>
                     <td className="text-right montant-col">
@@ -1013,17 +1013,17 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
                         <span className="montant-value">{formatMontant(vente.montant_total)}</span>
                       </div>
                     </td>
-                    <td className="text-right cout-col">
+                    <td className="text-right cout-col hide-on-mobile">
                       <div className="cout-display">
                         <span className="cout-value">{formatMontant(vente.cout_achat_total)}</span>
                       </div>
                     </td>
-                    <td className="text-right benefice-col">
+                    <td className="text-right benefice-col hide-on-mobile">
                       <div className={`benefice-display ${vente.benefice >= 0 ? 'positive' : 'negative'}`}>
                         <span className="benefice-value">{formatMontant(vente.benefice)}</span>
                       </div>
                     </td>
-                    <td className="text-right marge-col">
+                    <td className="text-right marge-col hide-on-mobile">
                       <div className="marge-display">
                         <span className={`marge-value ${vente.marge_pourcentage >= 0 ? 'positive' : 'negative'}`}>
                           {vente.marge_pourcentage?.toFixed(1) || '0.0'}%
@@ -1040,7 +1040,7 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
                           <Eye size={16} />
                         </button>
                         <button
-                          className="btn-icon print"
+                          className="btn-icon print hide-on-mobile"
                           title="Imprimer facture"
                           onClick={() => genererFacture(vente)}
                         >
@@ -2178,7 +2178,8 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
           background: #dc2626;
         }
 
-        /* --- RESPONSIVE --- */
+        /* --- RESPONSIVE MOBILE --- */
+        /* Tablettes (<= 1024px) */
         @media (max-width: 1024px) {
           .page-container {
             padding: 16px;
@@ -2189,6 +2190,7 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
           }
         }
 
+        /* Mobiles (<= 768px) */
         @media (max-width: 768px) {
           .page-header {
             flex-direction: column;
@@ -2198,7 +2200,12 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
 
           .header-right {
             width: 100%;
-            justify-content: flex-start;
+            justify-content: space-between;
+          }
+
+          .header-actions {
+            width: 100%;
+            justify-content: space-between;
           }
 
           .kpi-grid {
@@ -2210,22 +2217,55 @@ export default function HistoriqueVentes({ isOnline, userRole = null }) {
             align-items: stretch;
           }
 
+          .date-group .separator {
+            text-align: center;
+            padding: 8px 0;
+          }
+
           .advanced-grid {
             grid-template-columns: 1fr;
           }
 
           .modal-card {
             margin: 20px;
+            max-height: 80vh;
+          }
+
+          /* Masquer les colonnes moins importantes sur mobile */
+          .hide-on-mobile {
+            display: none;
+          }
+
+          /* Ajuster la taille de police pour le tableau mobile */
+          .modern-table td, .modern-table th {
+            padding: 10px 8px;
+            font-size: 0.8rem;
+          }
+
+          /* Rendre le tableau scrollable horizontalement */
+          .table-responsive {
+            -webkit-overflow-scrolling: touch;
           }
         }
 
-        @media (max-width: 640px) {
+        /* Petits Mobiles (<= 480px) */
+        @media (max-width: 480px) {
+          .title-block h1 {
+            font-size: 1.5rem;
+          }
+
           .info-grid {
             grid-template-columns: 1fr;
           }
 
           .modal-footer {
             flex-direction: column;
+          }
+
+          .pagination-container {
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
           }
         }
       `}</style>
