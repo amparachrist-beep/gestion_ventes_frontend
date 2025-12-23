@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { logout } from '../auth';
-// ✅ AJOUT DE dashboardAPI dans les imports
 import { abonnementAPI, venteAPI, profilAPI, dashboardAPI } from '../api';
 import { syncFull } from '../offline_sync';
 import {
@@ -15,12 +14,159 @@ import {
   TrendingUp, Wallet, LogOut, RefreshCw,
   History, Truck, Store, FileText, UserCog,
   Download, CreditCard, AlertCircle, ChevronRight,
-  CheckCircle, Wifi, WifiOff, CloudUpload, Database
+  CheckCircle, Wifi, WifiOff, CloudUpload, Database, ArrowLeft
 } from 'lucide-react';
 
-// ... (Le composant SyncStatus reste identique, ne pas changer) ...
+// =====================================================
+// 🔒 COMPOSANT DE VÉRIFICATION DE PERMISSION
+// À utiliser dans toutes vos pages protégées
+// =====================================================
+
+/**
+ * Hook personnalisé pour vérifier les permissions
+ */
+export const usePermissionCheck = (requiredRoles = ['gerant', 'admin']) => {
+  const [loading, setLoading] = useState(true);
+  const [hasPermission, setHasPermission] = useState(false);
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    checkPermission();
+  }, []);
+
+  const checkPermission = async () => {
+    try {
+      const response = await profilAPI.me();
+      const role = response.data.role;
+      setUserRole(role);
+      setHasPermission(requiredRoles.includes(role));
+    } catch (error) {
+      console.error('Erreur vérification permission:', error);
+      setHasPermission(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { loading, hasPermission, userRole };
+};
+
+/**
+ * Composant d'écran de chargement
+ */
+export const LoadingScreen = () => (
+  <div className="loading-screen">
+    <div className="spinner"></div>
+    <p>Vérification des permissions...</p>
+    <style jsx>{`
+      .loading-screen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 80vh;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #64748b;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top: 3px solid #4f46e5;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 15px;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
+
+/**
+ * Composant d'accès refusé
+ */
+export const AccessDenied = ({ userRole, requiredRoles = ['gérant', 'admin'] }) => (
+  <div className="access-denied">
+    <div className="denied-icon">
+      <AlertCircle size={48} />
+    </div>
+    <h2>Accès Refusé</h2>
+    <p>
+      Cette page nécessite les permissions: <strong>{requiredRoles.join(', ')}</strong>
+    </p>
+    {userRole && (
+      <p className="role-info">Votre rôle actuel: <strong>{userRole}</strong></p>
+    )}
+    <button onClick={() => window.location.href = '/login'} className="back-btn">
+      <ArrowLeft size={16} /> Retour à la connexion
+    </button>
+    <style jsx>{`
+      .access-denied {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 80vh;
+        font-family: system-ui, -apple-system, sans-serif;
+        color: #64748b;
+        text-align: center;
+        padding: 20px;
+      }
+      .denied-icon {
+        width: 80px;
+        height: 80px;
+        background: #fee2e2;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        color: #ef4444;
+      }
+      h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0 0 10px 0;
+      }
+      p {
+        margin: 0 0 10px 0;
+        max-width: 400px;
+      }
+      .role-info {
+        color: #64748b;
+        font-size: 0.875rem;
+        margin-bottom: 20px;
+      }
+      .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #4f46e5;
+        color: white;
+        text-decoration: none;
+        padding: 10px 16px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: background 0.2s;
+        border: none;
+        cursor: pointer;
+      }
+      .back-btn:hover {
+        background: #4338ca;
+      }
+    `}</style>
+  </div>
+);
+
+// =====================================================
+// FIN DU COMPOSANT DE VÉRIFICATION
+// =====================================================
+
 const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }) => {
-  // ... (Garder le code de SyncStatus tel quel)
   const [showError, setShowError] = useState(false);
   const formatDate = (dateString) => {
     if (!dateString) return '--:--';
@@ -63,6 +209,9 @@ const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }
 };
 
 export default function Dashboard({ isOnline }) {
+  // --- 1. VÉRIFICATION PERMISSION (Accessible à tous les rôles connectés) ---
+  const { loading: checkingPermissions, hasPermission, userRole } = usePermissionCheck(['gerant', 'admin', 'vendeur', 'caissier']);
+
   const [unifiedStats, setUnifiedStats] = useState({
     nombre_ventes: 0,
     total_montant: 0,
@@ -81,28 +230,39 @@ export default function Dashboard({ isOnline }) {
 
   const navigate = useNavigate();
 
-  const isGerant = profil?.role === 'gerant';
-  const isAdmin = profil?.role === 'admin';
-  const isVendeur = profil && ['vendeur', 'caissier'].includes(profil.role);
+  const isGerant = userRole === 'gerant';
+  const isAdmin = userRole === 'admin';
+  const isVendeur = ['vendeur', 'caissier'].includes(userRole);
 
   useEffect(() => {
-    const fetchProfil = async () => {
-      try {
-        const res = await profilAPI.me();
-        setProfil(res.data);
-      } catch (err) {
-        console.error("Erreur profil", err);
-        if(err.response?.status === 401) logout();
-      }
-    };
-    fetchProfil();
-  }, []);
+    // On charge le profil dès qu'on a la permission
+    if (hasPermission) {
+      const fetchProfil = async () => {
+        try {
+          const res = await profilAPI.me();
+          setProfil(res.data);
+        } catch (err) {
+          console.error("Erreur profil", err);
+          if(err.response?.status === 401) logout();
+        }
+      };
+      fetchProfil();
+    }
+  }, [hasPermission]);
 
   useEffect(() => {
     if (profil) {
       loadDashboardData();
     }
   }, [profil, isOnline]);
+
+  // ✅ CORRECTION MAJEURE ICI : Auto-Sync au retour de connexion
+  useEffect(() => {
+    if (isOnline && profil) {
+      console.log("🟢 Connexion détectée - Lancement auto-sync...");
+      handleSync();
+    }
+  }, [isOnline, profil]);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -115,32 +275,31 @@ export default function Dashboard({ isOnline }) {
         ventes_pending_count: 0
       };
 
+      // Toujours récupérer le compte en attente depuis la DB locale
+      if (profil?.id) {
+        const localStats = await getDashboardUnifiedStats(profil.id);
+        statsData.ventes_pending_count = localStats.ventes_pending_count;
+      }
+
       if (isOnline) {
-        // === MODE EN LIGNE : ON UTILISE LE SERVEUR ===
         try {
-          // 1. Récupérer les vraies stats calculées par Django (views.py -> dashboard_stats)
           const serverStatsRes = await dashboardAPI.getStats();
           const serverData = serverStatsRes.data;
 
-          console.log("✅ Stats Serveur reçues:", serverData);
-
-          // 2. Mettre à jour les stats avec les données du serveur
           statsData = {
+            ...statsData, // Garder le pending count local
             nombre_ventes: serverData.ventes.today.count,
             total_montant: serverData.ventes.today.total,
             total_depenses: serverData.depenses.today,
             benefice: serverData.benefices.today,
-            ventes_pending_count: 0 // En ligne, on suppose 0 en attente par défaut, ou on lit la DB locale
           };
 
-          // 3. Charger l'abonnement
           if (isGerant || isAdmin) {
             const aboRes = await abonnementAPI.current();
             setAbonnement(aboRes.data);
           }
 
-          // 4. Background Sync pour garder la DB locale à jour (Optionnel mais conseillé)
-          // On ne bloque pas l'affichage pour ça
+          // Background Sync pour garder la DB locale à jour
           venteAPI.list().then(res => {
              const ventesList = Array.isArray(res.data) ? res.data : (res.data.results || []);
              saveVentesSynced(ventesList);
@@ -148,17 +307,12 @@ export default function Dashboard({ isOnline }) {
 
         } catch (err) {
           console.error("Erreur chargement stats serveur:", err);
-          // Fallback vers local si le serveur plante
         }
       }
 
-      // === MODE HORS LIGNE OU FALLBACK ===
+      // Si hors ligne ou serveur fail ou montant 0 (possiblement pas à jour)
       if (!isOnline || statsData.total_montant === 0) {
-        // Si hors ligne ou si le serveur renvoie 0 (et qu'on a peut-être des données locales)
-        const localStats = await getDashboardUnifiedStats(profil.id);
-
-        // On récupère le nombre de ventes en attente de sync
-        statsData.ventes_pending_count = localStats.ventes_pending_count;
+        const localStats = await getDashboardUnifiedStats(profil?.id);
 
         if (!isOnline) {
             const depenses = await getDepensesStats();
@@ -171,9 +325,7 @@ export default function Dashboard({ isOnline }) {
         }
       }
 
-      // Récupération infos DB locale pour le status sync
       const dbInfo = await getDBStats();
-
       setUnifiedStats(statsData);
       setDbStats(dbInfo);
 
@@ -184,21 +336,23 @@ export default function Dashboard({ isOnline }) {
     }
   };
 
-  // ... (Le reste du code : handleSync, StatCard, ActionButton, JSX return...)
-  // ... Copiez le reste de votre Dashboard.jsx existant ici ...
-
   const handleSync = async () => {
     setSyncStatus('SYNCING');
     setSyncError(null);
     try {
+      // ✅ Synchronisation complète (envoie local -> serveur)
       const result = await syncFull((progress) => { console.log("Sync:", progress); });
+
       if (result.success) {
         setSyncStatus('SUCCESS');
+        // ✅ Recharger les données après le succès pour voir les vrais chiffres
         await loadDashboardData();
         setTimeout(() => setSyncStatus('IDLE'), 3000);
       } else {
         setSyncStatus('ERROR');
-        setSyncError("Échec de la synchronisation");
+        setSyncError("Échec sync partielle");
+        // Même en cas d'erreur partielle, on recharge pour voir ce qui est passé
+        await loadDashboardData();
       }
     } catch (e) {
       setSyncStatus('ERROR');
@@ -237,6 +391,12 @@ export default function Dashboard({ isOnline }) {
     if (abo.date_fin) return new Date(abo.date_fin) < new Date();
     return false;
   };
+
+  // --- 3. RENDER PERMISSION ---
+  if (checkingPermissions) return <LoadingScreen />;
+  // Note: Ici on vérifie le rôle global, mais comme tous les rôles ont accès au dashboard,
+  // on redirige seulement si pas de rôle du tout (non connecté/erreur)
+  if (!hasPermission && isOnline) return <AccessDenied userRole={userRole} />;
 
   return (
     <div className="dashboard-container">
