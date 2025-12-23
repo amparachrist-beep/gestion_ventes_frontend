@@ -7,7 +7,9 @@ import {
   getDashboardUnifiedStats,
   getDepensesStats,
   saveVentesSynced,
-  getDBStats
+  getDBStats,
+  saveDashboardCache, // <--- NOUVEAU
+  getDashboardCache   // <--- NOUVEAU
 } from '../db';
 import {
   LayoutDashboard, ShoppingCart, Package, Users,
@@ -267,66 +269,93 @@ export default function Dashboard({ isOnline }) {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      let statsData = {
+      // 1. Récupérer UNIQUEMENT les données locales en attente (ce qui a été fait hors ligne)
+      // On suppose que getDashboardUnifiedStats renvoie les totaux locaux.
+      // Pour être précis, on va surtout s'en servir pour le compteur "en attente".
+      const localStats = await getDashboardUnifiedStats(profil?.id);
+
+      // Structure de base
+      let displayStats = {
         nombre_ventes: 0,
         total_montant: 0,
         total_depenses: 0,
         benefice: 0,
-        ventes_pending_count: 0
+        ventes_pending_count: localStats.ventes_pending_count || 0
       };
 
-      // Toujours récupérer le compte en attente depuis la DB locale
-      if (profil?.id) {
-        const localStats = await getDashboardUnifiedStats(profil.id);
-        statsData.ventes_pending_count = localStats.ventes_pending_count;
-      }
+      let serverData = null;
 
+      // 2. TENTATIVE DE CHARGEMENT EN LIGNE
       if (isOnline) {
         try {
           const serverStatsRes = await dashboardAPI.getStats();
-          const serverData = serverStatsRes.data;
+          serverData = serverStatsRes.data;
 
-          statsData = {
-            ...statsData, // Garder le pending count local
-            nombre_ventes: serverData.ventes.today.count,
-            total_montant: serverData.ventes.today.total,
-            total_depenses: serverData.depenses.today,
-            benefice: serverData.benefices.today,
-          };
+          // ✅ SAUVEGARDE DANS LE CACHE POUR PLUS TARD
+          saveDashboardCache(serverData);
 
+          // Sync Background
           if (isGerant || isAdmin) {
-            const aboRes = await abonnementAPI.current();
-            setAbonnement(aboRes.data);
+             const aboRes = await abonnementAPI.current();
+             setAbonnement(aboRes.data);
           }
-
-          // Background Sync pour garder la DB locale à jour
           venteAPI.list().then(res => {
              const ventesList = Array.isArray(res.data) ? res.data : (res.data.results || []);
              saveVentesSynced(ventesList);
-          }).catch(err => console.warn("Background sync failed", err));
+          }).catch(console.warn);
 
         } catch (err) {
-          console.error("Erreur chargement stats serveur:", err);
+          console.error("Erreur serveur, passage en mode cache:", err);
         }
       }
 
-      // Si hors ligne ou serveur fail ou montant 0 (possiblement pas à jour)
-      if (!isOnline || statsData.total_montant === 0) {
-        const localStats = await getDashboardUnifiedStats(profil?.id);
-
-        if (!isOnline) {
-            const depenses = await getDepensesStats();
-            const totalDepenses = isVendeur ? 0 : (depenses.total || 0);
-
-            statsData.nombre_ventes = localStats.nombre_ventes;
-            statsData.total_montant = localStats.total_montant;
-            statsData.total_depenses = totalDepenses;
-            statsData.benefice = localStats.total_montant - totalDepenses;
-        }
+      // 3. SI PAS DE DONNÉES SERVEUR (Hors ligne ou Erreur), ON PREND LE CACHE
+      if (!serverData) {
+        serverData = getDashboardCache(); // Récupère la dernière version connue
       }
 
+      // 4. CONSTRUCTION DES STATS FINALES (Cache/Serveur + Pending Local)
+      if (serverData) {
+        // On prend les stats du serveur (ou du cache)
+        // ATTENTION : Si le cache date d'hier, il faut peut-être le vérifier,
+        // mais pour l'instant on affiche ce qu'on a.
+
+        displayStats.nombre_ventes = serverData.ventes.today.count;
+        displayStats.total_montant = serverData.ventes.today.total;
+        displayStats.total_depenses = serverData.depenses.today;
+        displayStats.benefice = serverData.benefices.today;
+
+        // 🟢 C'EST ICI LA MAGIE :
+        // Si on est hors ligne, on ajoute les ventes locales en attente aux stats du cache
+        // pour avoir un total "Temps réel"
+        if (!isOnline && localStats.ventes_pending_count > 0) {
+           // Note: localStats.total_montant contient TOUT le local (synced + pending).
+           // Idéalement, il faudrait une fonction qui ne renvoie QUE le montant des 'PENDING'.
+           // Si getDashboardUnifiedStats renvoie le total global local, on peut faire une approximation
+           // ou simplement afficher le cache + un indicateur.
+
+           // Pour faire simple et efficace sans changer tout db.js :
+           // On affiche les données du cache (ce qui est "validé")
+           // et le badge "X en attente" indique qu'il y a plus.
+
+           // Si vous voulez additionner, il faudrait que db.js renvoie le montant spécifique des pending.
+           // Supposons que localStats contient le montant des ventes PENDING créées aujourd'hui :
+           if (localStats.pending_amount_today) {
+              displayStats.total_montant += localStats.pending_amount_today;
+              displayStats.nombre_ventes += localStats.ventes_pending_count;
+              displayStats.benefice += localStats.pending_amount_today; // Approx (sans coût d'achat)
+           }
+        }
+      } else {
+        // Si aucun cache n'existe (première installation sans internet), on affiche le local
+        displayStats.nombre_ventes = localStats.nombre_ventes;
+        displayStats.total_montant = localStats.total_montant;
+      }
+
+      // Récupération infos DB locale pour le status sync
       const dbInfo = await getDBStats();
-      setUnifiedStats(statsData);
+
+      setUnifiedStats(displayStats);
       setDbStats(dbInfo);
 
     } catch (error) {

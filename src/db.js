@@ -58,6 +58,28 @@ export const initDB = async () => {
   });
 };
 
+// =====================================================
+// ✅ NOUVEAU : GESTION DU CACHE DASHBOARD (localStorage)
+// =====================================================
+
+export const saveDashboardCache = (data) => {
+  try {
+    localStorage.setItem('dashboard_stats_cache', JSON.stringify(data));
+    localStorage.setItem('dashboard_cache_time', new Date().toISOString());
+  } catch (e) {
+    console.error("Erreur sauvegarde cache dashboard", e);
+  }
+};
+
+export const getDashboardCache = () => {
+  try {
+    const data = localStorage.getItem('dashboard_stats_cache');
+    return data ? JSON.parse(data) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 // ================= PRODUITS =================
 
 export const saveProduits = async (produits) => {
@@ -114,26 +136,28 @@ export const deleteVenteOffline = async (offline_id) => {
   await db.delete('ventes_pending', offline_id);
 };
 
+// ✅ MISE À JOUR MAJEURE POUR LE DASHBOARD
 export const getDashboardUnifiedStats = async (userId = null) => {
   const db = await initDB();
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Date pour le filtre 7 jours (charts)
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
   const ventesSynced = await db.getAll('ventes_synced');
   const ventesPending = await db.getAll('ventes_pending');
 
-  // ✅ CORRECTION ANTI-DOUBLON
-  // 1. Créer un Set des offline_id qui sont DÉJÀ dans les ventes synchronisées
+  // 1. Anti-doublon (si une vente est à la fois dans synced et pending)
   const syncedOfflineIds = new Set(
     ventesSynced
       .map(v => v.offline_id)
-      .filter(id => id) // On ne garde que ceux qui ont un ID offline
+      .filter(id => id)
   );
 
-  // 2. Ne garder dans 'pending' que celles qui ne sont PAS dans 'synced'
   const uniquePending = ventesPending.filter(v => !syncedOfflineIds.has(v.offline_id));
 
-  // 3. Fusionner
+  // 2. Fusion pour les stats globales (7 jours)
   const allVentes = [...ventesSynced, ...uniquePending];
 
   const filteredVentes = allVentes.filter(v => {
@@ -145,10 +169,25 @@ export const getDashboardUnifiedStats = async (userId = null) => {
 
   const totalMontant = filteredVentes.reduce((sum, v) => sum + (parseFloat(v.montant_total) || 0), 0);
 
+  // ✅ 3. CALCUL SPÉCIFIQUE "AUJOURD'HUI PENDING"
+  // C'est ce qui manque pour que le Dashboard affiche le bon chiffre hors ligne
+  let pending_amount_today = 0;
+
+  uniquePending.forEach(v => {
+    const vDate = (v.date_heure || v.created_at || '').substring(0, 10);
+    // On ne compte que les ventes de CET utilisateur pour l'addition locale
+    if (vDate === todayStr) {
+       if (!userId || String(v.utilisateur) === String(userId)) {
+          pending_amount_today += (parseFloat(v.montant_total) || 0);
+       }
+    }
+  });
+
   return {
     nombre_ventes: filteredVentes.length,
-    total_montant: totalMontant,
-    ventes_pending_count: uniquePending.length, // On utilise uniquePending ici aussi
+    total_montant: totalMontant, // Total 7 jours (pour les graphs si utilisés)
+    ventes_pending_count: uniquePending.length,
+    pending_amount_today: pending_amount_today, // ✅ LE CHIFFRE CLÉ POUR LE FIX
     last_sync: await getLastSyncTime()
   };
 };
@@ -187,7 +226,6 @@ export const saveClientOffline = async (client) => {
 
 // ================= DÉPENSES (CRUD Complet) =================
 
-// 1. Sauvegarder le cache serveur
 export const saveDepenses = async (depenses) => {
   const db = await initDB();
   const tx = db.transaction('depenses', 'readwrite');
@@ -195,15 +233,13 @@ export const saveDepenses = async (depenses) => {
   await tx.done;
 };
 
-// 2. Récupérer toutes les dépenses (Cache + Local)
 export const getDepenses = async () => {
   const db = await initDB();
   const synced = await db.getAll('depenses');
   const pending = await db.getAll('depenses_pending');
-  return [...pending, ...synced]; // Pending d'abord
+  return [...pending, ...synced];
 };
 
-// 3. Sauvegarder une dépense locale
 export const saveDepenseOffline = async (depense) => {
   const db = await initDB();
   const depenseToSave = {
@@ -217,19 +253,16 @@ export const saveDepenseOffline = async (depense) => {
   return depenseToSave;
 };
 
-// 4. Récupérer les dépenses en attente (pour la sync)
 export const getDepensesPending = async () => {
   const db = await initDB();
   return db.getAll('depenses_pending');
 };
 
-// 5. Supprimer une dépense locale (après sync)
 export const deleteDepenseOffline = async (offline_id) => {
   const db = await initDB();
   await db.delete('depenses_pending', offline_id);
 };
 
-// 6. Stats des dépenses (Cache + Local)
 export const getDepensesStats = async () => {
   const db = await initDB();
   const sevenDaysAgo = new Date();
