@@ -156,8 +156,8 @@ export const AccessDenied = ({ userRole, requiredRoles = ['gérant', 'admin'] })
 // =====================================================
 
 export default function Produits({ isOnline }) {
-  // --- 1. VÉRIFICATION PERMISSION ---
-  const { loading: checkingPermissions, hasPermission, userRole } = usePermissionCheck(['gerant', 'admin']);
+  // --- 1. VÉRIFICATION PERMISSION (Corrigée pour inclure vendeur) ---
+  const { loading: checkingPermissions, hasPermission, userRole } = usePermissionCheck(['gerant', 'admin', 'vendeur']);
 
   // --- ÉTATS ---
   const [produits, setProduits] = useState([]);
@@ -338,6 +338,9 @@ export default function Produits({ isOnline }) {
   // --- RENDER NORMAL ---
   if (loading && !isOnline) return <div className="loading-screen">Connexion requise...</div>;
 
+  // Rôle avec droits d'édition
+  const canEdit = userRole === 'gerant' || userRole === 'admin';
+
   return (
     <div className="page-container">
       {/* HEADER FIXE */}
@@ -349,10 +352,12 @@ export default function Produits({ isOnline }) {
             <p className="subtitle">{filteredProduits.length} références</p>
           </div>
         </div>
-        <button className="btn-add" onClick={() => { resetForm(); setShowModal(true); }} disabled={!isOnline}>
-          <Plus size={20} />
-          <span className="btn-text">Nouveau Produit</span>
-        </button>
+        {canEdit && (
+          <button className="btn-add" onClick={() => { resetForm(); setShowModal(true); }} disabled={!isOnline}>
+            <Plus size={20} />
+            <span className="btn-text">Nouveau Produit</span>
+          </button>
+        )}
       </header>
 
       <div className="content-wrapper">
@@ -426,7 +431,7 @@ export default function Produits({ isOnline }) {
                 </div>
 
                 {/* --- NOUVEAUX BOUTONS D'ACTION EN BAS DE CARTE --- */}
-                {isOnline && (
+                {isOnline && canEdit && (
                   <div className="card-actions-footer">
                     <button className="btn-action edit" onClick={() => handleEdit(item)}>
                       <Edit size={16} /> Modifier

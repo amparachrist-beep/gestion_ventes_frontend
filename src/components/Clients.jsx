@@ -177,7 +177,7 @@ export const withPermission = (Component, requiredRoles = ['gerant', 'admin']) =
 
 export default function Clients({ isOnline }) {
   // --- 1. VÉRIFICATION PERMISSION ---
-  const { loading: checkingPermissions, hasPermission, userRole } = usePermissionCheck(['gerant', 'admin']);
+  const { loading: checkingPermissions, hasPermission, userRole } = usePermissionCheck(['gerant', 'admin', 'vendeur']);
 
   const [clients, setClients] = useState([]);
   const [boutiques, setBoutiques] = useState([]);
