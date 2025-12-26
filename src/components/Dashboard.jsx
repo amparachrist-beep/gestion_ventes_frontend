@@ -116,7 +116,7 @@ const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }
 };
 
 export default function Dashboard({ isOnline }) {
-  // --- 1. LOGIQUE & ETATS ---
+  // --- LOGIQUE & ETATS ---
   const { loading: checkingPermissions, hasPermission, userRole } = usePermissionCheck(['gerant', 'admin', 'vendeur', 'caissier']);
   const [unifiedStats, setUnifiedStats] = useState({ nombre_ventes: 0, total_montant: 0, total_depenses: 0, benefice: 0, ventes_pending_count: 0 });
   const [abonnement, setAbonnement] = useState(null);
@@ -269,7 +269,6 @@ export default function Dashboard({ isOnline }) {
           <div className="header-content">
             <div className="header-left">
               <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>☰</button>
-              {/* Le wrapper "user-info-group" est ciblé par le CSS mobile pour gérer l'espace */}
               <div className="user-info-group">
                 <h1 className="greeting">
                     Bonjour, <span className="username">{profil?.username || 'Utilisateur'}</span>
@@ -299,7 +298,7 @@ export default function Dashboard({ isOnline }) {
               </div>
             )}
 
-            {/* HEADER ACTIONS (SYNC) AVEC WRAPPER POUR CENTRAGE MOBILE */}
+            {/* HEADER ACTIONS (SYNC) */}
             <div className="actions-header">
                 <h2 className="section-title">Aperçu Aujourd'hui</h2>
                 <div className="sync-wrapper">
@@ -446,15 +445,29 @@ export default function Dashboard({ isOnline }) {
 
         /* === MOBILE RESPONSIVE FIXES === */
         @media (max-width: 768px) {
-            .sidebar { position: fixed; left: 0; top: 0; height: 100%; transform: translateX(-100%); box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1); }
+            .sidebar { position: fixed; left: 0; top: 0; height: 100%; width: 260px; transform: translateX(-100%); box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1); z-index: 200; }
             .sidebar.mobile-open { transform: translateX(0); }
             .close-sidebar, .menu-toggle { display: block; }
-            .dashboard-wrapper { padding: 16px; }
 
-            /* Fix Header Mobile - Alignement optimal */
+            /* Centrage du contenu principal */
+            .main-content { width: 100%; max-width: 100vw; overflow-x: hidden; }
+            .main-header { width: 100%; }
+            .scroll-content { width: 100%; padding-left: 0; padding-right: 0; }
+            .dashboard-wrapper {
+                padding: 16px 12px;
+                max-width: 100%;
+                width: 100%;
+                margin: 0 auto;
+                box-sizing: border-box;
+            }
+
+            /* Fix Header Mobile - Disposition optimale */
             .header-content {
                 padding: 0 12px;
                 gap: 8px;
+                max-width: 100%;
+                width: 100%;
+                box-sizing: border-box;
             }
 
             .header-left {
@@ -462,20 +475,24 @@ export default function Dashboard({ isOnline }) {
                 flex: 1;
                 min-width: 0;
                 overflow: hidden;
+                order: 2;
             }
 
             .user-info-group {
                 gap: 6px;
                 flex: 1;
                 min-width: 0;
+                display: flex;
+                align-items: center;
             }
 
             .greeting {
-                font-size: 0.95rem;
+                font-size: 0.9rem;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
-                max-width: 100%;
+                flex: 1;
+                min-width: 0;
             }
 
             .username {
@@ -490,6 +507,7 @@ export default function Dashboard({ isOnline }) {
 
             .logout-text { display: none; }
 
+            /* Bouton déconnexion à gauche */
             .btn-logout {
                 padding: 8px;
                 border-radius: 8px;
@@ -497,7 +515,8 @@ export default function Dashboard({ isOnline }) {
                 height: 36px;
                 flex-shrink: 0;
                 justify-content: center;
-                margin-left: 0;
+                margin: 0;
+                order: 1;
             }
 
             /* Fix Centrage Sync Widget & Title */
@@ -506,6 +525,7 @@ export default function Dashboard({ isOnline }) {
                 align-items: center;
                 gap: 12px;
                 margin-bottom: 16px;
+                width: 100%;
             }
 
             .section-title {
@@ -523,15 +543,35 @@ export default function Dashboard({ isOnline }) {
             .sync-widget {
                 font-size: 0.85rem;
                 padding: 6px 10px;
+                max-width: 90%;
             }
 
-            /* Fix Grilles */
-            .stats-section { grid-template-columns: 1fr; gap: 12px; }
-            .stat-card { padding: 16px; }
+            /* Fix Grilles - Centrage parfait */
+            .stats-section {
+                grid-template-columns: 1fr;
+                gap: 12px;
+                width: 100%;
+                max-width: 100%;
+            }
+
+            .stat-card {
+                padding: 16px;
+                margin: 0 auto;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+
+            .actions-section {
+                width: 100%;
+                max-width: 100%;
+            }
 
             .actions-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 10px;
+                width: 100%;
+                max-width: 100%;
             }
 
             .action-btn {
@@ -540,6 +580,8 @@ export default function Dashboard({ isOnline }) {
                 padding: 14px 10px;
                 gap: 8px;
                 align-items: center;
+                width: 100%;
+                box-sizing: border-box;
             }
 
             .action-title {
@@ -567,6 +609,8 @@ export default function Dashboard({ isOnline }) {
                 border-top: 1px solid #e2e8f0;
                 gap: 0;
                 background: white;
+                max-width: 100vw;
+                box-sizing: border-box;
             }
 
             .glass-nav .nav-item {
@@ -585,6 +629,9 @@ export default function Dashboard({ isOnline }) {
                 align-items: flex-start;
                 padding: 12px;
                 gap: 8px;
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
             }
 
             .alert-text {
@@ -602,7 +649,8 @@ export default function Dashboard({ isOnline }) {
             .greeting { font-size: 0.85rem; }
             .badge-role { font-size: 0.6rem; padding: 2px 5px; }
             .btn-logout { width: 32px; height: 32px; padding: 6px; }
-            .header-content { padding: 0 10px; }
+            .header-content { padding: 0 8px; }
+            .dashboard-wrapper { padding: 12px 8px; }
             .actions-grid { gap: 8px; }
             .action-btn { padding: 10px 8px; }
         }

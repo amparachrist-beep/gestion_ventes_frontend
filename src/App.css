@@ -1,3 +1,7 @@
+/* ============================================
+APP.CSS - STYLES GLOBAUX
+============================================ */
+
 * {
   margin: 0;
   padding: 0;
@@ -8,51 +12,71 @@
   --primary: #4f46e5;
   --primary-dark: #4338ca;
   --success: #10b981;
+  --success-dark: #059669;
   --warning: #f59e0b;
   --error: #ef4444;
-  --bg: #f9fafb;
+  --error-dark: #dc2626;
+  --bg: #f8fafc;
   --card: #ffffff;
-  --text: #111827;
+  --text: #1e293b;
   --text-light: #6b7280;
   --border: #e5e7eb;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background: var(--bg);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  background-color: var(--bg);
   color: var(--text);
   line-height: 1.6;
+  overflow-x: hidden;
 }
 
 .app {
+  position: relative;
   min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
   padding-bottom: 80px;
 }
 
-/* Network Indicator */
+/* ============================================
+INDICATEUR DE CONNEXION - DESKTOP
+============================================ */
 .network-indicator {
   position: fixed;
-  top: 10px;
-  right: 10px;
+  top: 20px;
+  right: 20px;
   padding: 8px 16px;
   border-radius: 20px;
-  font-size: 14px;
-  font-weight: 500;
-  z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 150; /* Réduit de 1000 à 150 pour éviter les conflits */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  animation: fadeIn 0.3s ease;
 }
 
 .network-indicator.online {
-  background: var(--success);
+  background: linear-gradient(135deg, var(--success), var(--success-dark));
   color: white;
 }
 
 .network-indicator.offline {
-  background: var(--error);
+  background: linear-gradient(135deg, var(--error), var(--error-dark));
   color: white;
 }
 
-/* Auth Pages */
+.sync-progress {
+  font-size: 0.75rem;
+  opacity: 0.9;
+}
+
+/* ============================================
+AUTH PAGES
+============================================ */
 .auth-container {
   display: flex;
   align-items: center;
@@ -83,7 +107,9 @@ body {
   color: var(--text-light);
 }
 
-/* Forms */
+/* ============================================
+FORMS
+============================================ */
 .form-group {
   margin-bottom: 20px;
 }
@@ -113,7 +139,9 @@ body {
   border-color: var(--primary);
 }
 
-/* Buttons */
+/* ============================================
+BUTTONS
+============================================ */
 .btn-primary {
   width: 100%;
   padding: 14px;
@@ -179,7 +207,9 @@ body {
   cursor: not-allowed;
 }
 
-/* Alerts */
+/* ============================================
+ALERTS
+============================================ */
 .alert {
   padding: 16px;
   border-radius: 8px;
@@ -216,7 +246,9 @@ body {
   text-align: center;
 }
 
-/* Dashboard */
+/* ============================================
+DASHBOARD
+============================================ */
 .dashboard {
   padding: 20px;
   max-width: 1200px;
@@ -258,7 +290,9 @@ body {
   color: var(--primary);
 }
 
-/* Quick Actions */
+/* ============================================
+QUICK ACTIONS
+============================================ */
 .quick-actions {
   margin-bottom: 40px;
 }
@@ -297,7 +331,9 @@ body {
   font-weight: 600;
 }
 
-/* Sync Status */
+/* ============================================
+SYNC STATUS
+============================================ */
 .sync-section {
   background: var(--card);
   padding: 20px;
@@ -350,7 +386,9 @@ body {
   margin-left: auto;
 }
 
-/* Form Card */
+/* ============================================
+FORM CARD
+============================================ */
 .form-card {
   background: var(--card);
   padding: 24px;
@@ -369,7 +407,9 @@ body {
   text-align: center;
 }
 
-/* Bottom Navigation */
+/* ============================================
+BOTTOM NAVIGATION
+============================================ */
 .bottom-nav {
   position: fixed;
   bottom: 0;
@@ -405,7 +445,9 @@ body {
   color: var(--primary);
 }
 
-/* Page Header */
+/* ============================================
+PAGE HEADER
+============================================ */
 .page {
   padding: 20px;
   max-width: 800px;
@@ -419,8 +461,69 @@ body {
   margin-bottom: 24px;
 }
 
-/* Responsive */
+/* ============================================
+ANIMATIONS GLOBALES
+============================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* ============================================
+SCROLL BAR CUSTOM (OPTIONNEL)
+============================================ */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* ============================================
+RESPONSIVE MOBILE
+============================================ */
 @media (max-width: 768px) {
+  /* Repositionnement de l'indicateur en mobile */
+  .network-indicator {
+    top: 10px;
+    right: 10px;
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: 16px;
+    /* Important : z-index inférieur au header du Dashboard */
+    z-index: 50;
+  }
+
+  .sync-progress {
+    display: none; /* Cache le texte de sync en mobile */
+  }
+
   .auth-card {
     padding: 24px;
   }
@@ -437,5 +540,14 @@ body {
 @media (max-width: 480px) {
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 360px) {
+  .network-indicator {
+    top: 8px;
+    right: 8px;
+    padding: 4px 10px;
+    font-size: 0.7rem;
   }
 }
