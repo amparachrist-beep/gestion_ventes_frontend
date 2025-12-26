@@ -454,7 +454,7 @@ export default function Dashboard({ isOnline }) {
             .main-header { width: 100%; }
             .scroll-content { width: 100%; padding-left: 0; padding-right: 0; }
             .dashboard-wrapper {
-                padding: 16px 12px;
+                padding: 16px 8px;
                 max-width: 100%;
                 width: 100%;
                 margin: 0 auto;
@@ -552,11 +552,12 @@ export default function Dashboard({ isOnline }) {
                 gap: 12px;
                 width: 100%;
                 max-width: 100%;
+                padding: 0;
             }
 
             .stat-card {
                 padding: 16px;
-                margin: 0 auto;
+                margin: 0;
                 width: 100%;
                 max-width: 100%;
                 box-sizing: border-box;
@@ -565,19 +566,21 @@ export default function Dashboard({ isOnline }) {
             .actions-section {
                 width: 100%;
                 max-width: 100%;
+                padding: 0;
             }
 
             .actions-grid {
                 grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
+                gap: 8px;
                 width: 100%;
                 max-width: 100%;
+                padding: 0;
             }
 
             .action-btn {
                 flex-direction: column;
                 text-align: center;
-                padding: 14px 10px;
+                padding: 16px 8px;
                 gap: 8px;
                 align-items: center;
                 width: 100%;
