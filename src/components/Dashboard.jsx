@@ -357,8 +357,19 @@ export default function Dashboard({ isOnline }) {
 
       {/* === CSS === */}
       <style jsx>{`
-        :global(body) { margin: 0; font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
-        .dashboard-container { display: flex; height: 100vh; overflow: hidden; }
+        :global(body) {
+          margin: 0;
+          font-family: 'Inter', sans-serif;
+          background-color: #f8fafc;
+          color: #1e293b;
+          overflow-x: hidden; /* Empêche le scroll horizontal */
+        }
+        .dashboard-container {
+          display: flex;
+          height: 100vh;
+          overflow: hidden;
+          width: 100vw; /* Largeur fixe pour éviter l'espace à droite */
+        }
 
         /* SIDEBAR */
         .sidebar { width: 260px; background: white; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; flex-shrink: 0; transition: transform 0.3s ease; z-index: 100; }
@@ -373,7 +384,14 @@ export default function Dashboard({ isOnline }) {
         .btn-logout-sidebar { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; background: #fee2e2; color: #ef4444; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
 
         /* MAIN CONTENT */
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .main-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          width: 100%; /* Largeur complète */
+          max-width: 100%; /* Largeur maximale */
+        }
         .main-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 0; flex-shrink: 0; z-index: 10; }
         .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
 
@@ -389,8 +407,20 @@ export default function Dashboard({ isOnline }) {
         .btn-logout { display: flex; align-items: center; gap: 8px; background: #fee2e2; color: #ef4444; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: background 0.2s; flex-shrink: 0; margin-left: 10px; }
         .btn-logout:hover { background: #fecaca; }
 
-        .scroll-content { flex: 1; overflow-y: auto; padding-bottom: 100px; -webkit-overflow-scrolling: touch; }
-        .dashboard-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .scroll-content {
+          flex: 1;
+          overflow-y: auto;
+          padding-bottom: 100px;
+          -webkit-overflow-scrolling: touch;
+          overflow-x: hidden; /* Empêche le scroll horizontal */
+        }
+        .dashboard-wrapper {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 20px;
+          width: 100%; /* Largeur complète */
+          box-sizing: border-box; /* Inclut le padding dans la largeur */
+        }
 
         /* HEADER ACTIONS DESKTOP */
         .actions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
@@ -450,14 +480,26 @@ export default function Dashboard({ isOnline }) {
             .close-sidebar, .menu-toggle { display: block; }
 
             /* Centrage du contenu principal */
-            .main-content { width: 100%; max-width: 100vw; overflow-x: hidden; }
-            .main-header { width: 100%; }
-            .scroll-content { width: 100%; padding-left: 0; padding-right: 0; }
+            .main-content {
+              width: 100%;
+              max-width: 100vw;
+              overflow-x: hidden;
+            }
+            .main-header {
+              width: 100%;
+              max-width: 100%;
+            }
+            .scroll-content {
+              width: 100%;
+              padding-left: 0;
+              padding-right: 0;
+              overflow-x: hidden;
+            }
             .dashboard-wrapper {
                 padding: 16px 8px;
                 max-width: 100%;
                 width: 100%;
-                margin: 0 auto;
+                margin: 0;
                 box-sizing: border-box;
             }
 
