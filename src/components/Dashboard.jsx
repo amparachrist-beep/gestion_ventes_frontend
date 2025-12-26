@@ -18,12 +18,10 @@ import {
   CheckCircle, WifiOff, CloudUpload, Database, ArrowLeft
 } from 'lucide-react';
 
-// ... (Gardez vos imports et le hook usePermissionCheck inchangés ici) ...
-// ... (Gardez LoadingScreen et AccessDenied inchangés ici) ...
+// =====================================================
+// 🔒 COMPOSANT DE VÉRIFICATION DE PERMISSION
+// =====================================================
 
-/**
- * Hook personnalisé pour vérifier les permissions (inchangé)
- */
 export const usePermissionCheck = (requiredRoles = ['gerant', 'admin']) => {
   const [loading, setLoading] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
@@ -50,16 +48,31 @@ export const usePermissionCheck = (requiredRoles = ['gerant', 'admin']) => {
   return { loading, hasPermission, userRole };
 };
 
-// ... (Insérez ici LoadingScreen et AccessDenied comme dans votre code original) ...
 export const LoadingScreen = () => (
-    <div className="loading-screen"><div className="spinner"></div><p>Chargement...</p></div>
+  <div className="loading-screen">
+    <div className="spinner"></div>
+    <p>Chargement...</p>
+    <style jsx>{`
+      .loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; color: #64748b; }
+      .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top: 3px solid #4f46e5; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    `}</style>
+  </div>
 );
+
 export const AccessDenied = ({ userRole }) => (
-    <div className="access-denied"><h2>Accès Refusé</h2><button onClick={() => window.location.href='/login'}>Retour</button></div>
+  <div className="access-denied">
+    <h2>Accès Refusé</h2>
+    <button onClick={() => window.location.href = '/login'}>Retour à la connexion</button>
+    <style jsx>{`
+      .access-denied { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; text-align: center; }
+      button { margin-top: 20px; padding: 10px 20px; background: #4f46e5; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    `}</style>
+  </div>
 );
 
 // =====================================================
-// WIDGET SYNC (Inchangé dans la logique)
+// WIDGET SYNC
 // =====================================================
 const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }) => {
   const [showError, setShowError] = useState(false);
@@ -103,7 +116,7 @@ const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }
 };
 
 export default function Dashboard({ isOnline }) {
-  // --- LOGIQUE INCHANGÉE ---
+  // --- 1. LOGIQUE & ETATS ---
   const { loading: checkingPermissions, hasPermission, userRole } = usePermissionCheck(['gerant', 'admin', 'vendeur', 'caissier']);
   const [unifiedStats, setUnifiedStats] = useState({ nombre_ventes: 0, total_montant: 0, total_depenses: 0, benefice: 0, ventes_pending_count: 0 });
   const [abonnement, setAbonnement] = useState(null);
@@ -216,7 +229,7 @@ export default function Dashboard({ isOnline }) {
 
   return (
     <div className="dashboard-container">
-      {/* SIDEBAR (Inchangée) */}
+      {/* SIDEBAR */}
       <aside className={`sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <h2 className="app-title">Gestion Stock</h2>
@@ -251,12 +264,12 @@ export default function Dashboard({ isOnline }) {
       </aside>
 
       <div className="main-content">
-        {/* === HEADER CORRIGÉ === */}
+        {/* === HEADER === */}
         <header className="main-header">
           <div className="header-content">
             <div className="header-left">
               <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>☰</button>
-              {/* Conteneur flex pour gérer le texte long */}
+              {/* Le wrapper "user-info-group" est ciblé par le CSS mobile pour gérer l'espace */}
               <div className="user-info-group">
                 <h1 className="greeting">
                     Bonjour, <span className="username">{profil?.username || 'Utilisateur'}</span>
@@ -264,7 +277,7 @@ export default function Dashboard({ isOnline }) {
                 <span className="badge-role">{isGerant ? 'Gérant' : isAdmin ? 'Admin' : 'Vendeur'}</span>
               </div>
             </div>
-            {/* Bouton déconnexion qui ne bouge pas */}
+
             <button onClick={() => { logout(); navigate('/login'); }} className="btn-logout">
               <LogOut size={18} /><span className="logout-text">Quitter</span>
             </button>
@@ -274,7 +287,7 @@ export default function Dashboard({ isOnline }) {
         <div className="scroll-content">
           <div className="dashboard-wrapper">
 
-            {/* BANNIÈRE (Inchangée) */}
+            {/* BANNIÈRE ABONNEMENT */}
             {abonnement && (isGerant || isAdmin) && (
               <div className={`alert-banner ${isAboExpired(abonnement) ? 'expired' : abonnement.type_abonnement === 'GRATUIT' ? 'warning' : 'premium'}`}>
                 {isAboExpired(abonnement) ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
@@ -286,7 +299,7 @@ export default function Dashboard({ isOnline }) {
               </div>
             )}
 
-            {/* === HEADER D'ACTIONS (Sync Status) CORRIGÉ === */}
+            {/* HEADER ACTIONS (SYNC) AVEC WRAPPER POUR CENTRAGE MOBILE */}
             <div className="actions-header">
                 <h2 className="section-title">Aperçu Aujourd'hui</h2>
                 <div className="sync-wrapper">
@@ -343,7 +356,7 @@ export default function Dashboard({ isOnline }) {
         )}
       </nav>
 
-      {/* === CSS AMÉLIORÉ === */}
+      {/* === CSS === */}
       <style jsx>{`
         :global(body) { margin: 0; font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
         .dashboard-container { display: flex; height: 100vh; overflow: hidden; }
@@ -365,23 +378,22 @@ export default function Dashboard({ isOnline }) {
         .main-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 0; flex-shrink: 0; z-index: 10; }
         .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
 
-        /* GESTION HEADER GAUCHE POUR MOBILE */
-        .header-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; /* Important pour flex-shrink */ }
+        /* HEADER GAUCHE DESKTOP */
+        .header-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
         .user-info-group { display: flex; align-items: center; gap: 10px; overflow: hidden; white-space: nowrap; }
         .menu-toggle { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; padding: 0; }
-
         .greeting { margin: 0; font-size: 1.25rem; font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; }
         .username { color: #4f46e5; }
         .badge-role { background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; flex-shrink: 0; }
 
-        /* BOUTON LOGOUT HEADER */
+        /* BOUTON LOGOUT DESKTOP */
         .btn-logout { display: flex; align-items: center; gap: 8px; background: #fee2e2; color: #ef4444; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: background 0.2s; flex-shrink: 0; margin-left: 10px; }
         .btn-logout:hover { background: #fecaca; }
 
         .scroll-content { flex: 1; overflow-y: auto; padding-bottom: 100px; -webkit-overflow-scrolling: touch; }
         .dashboard-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; }
 
-        /* HEADER ACTIONS & SYNC */
+        /* HEADER ACTIONS DESKTOP */
         .actions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         .section-title { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 0; }
 
@@ -393,7 +405,7 @@ export default function Dashboard({ isOnline }) {
         .alert-text { flex: 1; }
         .btn-renew-banner { background: #dc2626; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.8rem; white-space: nowrap; transition: 0.2s; margin-top: 4px; }
 
-        /* GRILLES */
+        /* GRILLES DESKTOP */
         .stats-section { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
         .stat-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; align-items: center; gap: 16px; border: 1px solid #f1f5f9; transition: transform 0.2s; }
         .icon-wrapper { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
@@ -425,7 +437,6 @@ export default function Dashboard({ isOnline }) {
         .hover-dark .action-icon-box { background: #334155; color: #f8fafc; }
         .action-title { font-size: 0.9rem; font-weight: 500; color: #475569; flex: 1; }
         .arrow-icon { color: #cbd5e1; }
-
         .glass-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); padding: 8px 30px; border-radius: 30px; display: flex; gap: 30px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05); z-index: 100; }
 
         @media (max-width: 1024px) {
@@ -440,36 +451,160 @@ export default function Dashboard({ isOnline }) {
             .close-sidebar, .menu-toggle { display: block; }
             .dashboard-wrapper { padding: 16px; }
 
-            /* Fix Header Mobile */
-            .header-content { padding: 0 16px; }
-            .greeting { font-size: 1rem; }
-            .badge-role { display: none; } /* On cache le rôle sur mobile si trop petit, ou on réduit la police */
-            .logout-text, .arrow-icon { display: none; }
-            .btn-logout { padding: 8px; border-radius: 50%; aspect-ratio: 1; justify-content: center; }
+            /* Fix Header Mobile - Alignement optimal */
+            .header-content {
+                padding: 0 12px;
+                gap: 8px;
+            }
+
+            .header-left {
+                gap: 8px;
+                flex: 1;
+                min-width: 0;
+                overflow: hidden;
+            }
+
+            .user-info-group {
+                gap: 6px;
+                flex: 1;
+                min-width: 0;
+            }
+
+            .greeting {
+                font-size: 0.95rem;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 100%;
+            }
+
+            .username {
+                display: inline;
+            }
+
+            .badge-role {
+                font-size: 0.65rem;
+                padding: 2px 6px;
+                flex-shrink: 0;
+            }
+
+            .logout-text { display: none; }
+
+            .btn-logout {
+                padding: 8px;
+                border-radius: 8px;
+                width: 36px;
+                height: 36px;
+                flex-shrink: 0;
+                justify-content: center;
+                margin-left: 0;
+            }
 
             /* Fix Centrage Sync Widget & Title */
             .actions-header {
                 flex-direction: column;
-                justify-content: center;
-                text-align: center;
-                gap: 15px;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 16px;
             }
-            .section-title { width: 100%; text-align: center; }
-            .sync-wrapper { width: 100%; display: flex; justify-content: center; }
+
+            .section-title {
+                width: 100%;
+                text-align: center;
+                font-size: 1rem;
+            }
+
+            .sync-wrapper {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+            }
+
+            .sync-widget {
+                font-size: 0.85rem;
+                padding: 6px 10px;
+            }
 
             /* Fix Grilles */
             .stats-section { grid-template-columns: 1fr; gap: 12px; }
             .stat-card { padding: 16px; }
-            .actions-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-            .action-btn { flex-direction: column; text-align: center; padding: 12px 8px; gap: 8px; }
-            .action-title { font-size: 0.8rem; line-height: 1.2; }
-            .action-icon-box { margin-bottom: 4px; }
+
+            .actions-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .action-btn {
+                flex-direction: column;
+                text-align: center;
+                padding: 14px 10px;
+                gap: 8px;
+                align-items: center;
+            }
+
+            .action-title {
+                font-size: 0.8rem;
+                line-height: 1.2;
+                text-align: center;
+            }
+
+            .action-icon-box {
+                width: 40px;
+                height: 40px;
+            }
+
+            .arrow-icon { display: none; }
 
             /* Nav Mobile */
-            .glass-nav { width: 100%; bottom: 0; left: 0; transform: none; border-radius: 0; justify-content: space-around; padding: 12px 0; border-top: 1px solid #e2e8f0; gap: 0; background: white; }
+            .glass-nav {
+                width: 100%;
+                bottom: 0;
+                left: 0;
+                transform: none;
+                border-radius: 0;
+                justify-content: space-around;
+                padding: 12px 0;
+                border-top: 1px solid #e2e8f0;
+                gap: 0;
+                background: white;
+            }
+
+            .glass-nav .nav-item {
+                flex-direction: column;
+                gap: 4px;
+                font-size: 0.7rem;
+                padding: 0;
+                min-width: 60px;
+                align-items: center;
+            }
+
             .scroll-content { padding-bottom: 80px; }
-            .alert-banner { align-items: flex-start; }
-            .btn-renew-banner { margin-top: 4px; }
+
+            .alert-banner {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 12px;
+                gap: 8px;
+            }
+
+            .alert-text {
+                font-size: 0.85rem;
+            }
+
+            .btn-renew-banner {
+                margin-top: 0;
+                align-self: flex-start;
+            }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 360px) {
+            .greeting { font-size: 0.85rem; }
+            .badge-role { font-size: 0.6rem; padding: 2px 5px; }
+            .btn-logout { width: 32px; height: 32px; padding: 6px; }
+            .header-content { padding: 0 10px; }
+            .actions-grid { gap: 8px; }
+            .action-btn { padding: 10px 8px; }
         }
       `}</style>
     </div>
