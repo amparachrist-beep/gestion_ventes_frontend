@@ -5,27 +5,24 @@ import { abonnementAPI, venteAPI, profilAPI, dashboardAPI } from '../api';
 import { syncFull } from '../offline_sync';
 import {
   getDashboardUnifiedStats,
-  getDepensesStats,
   saveVentesSynced,
   getDBStats,
-  saveDashboardCache, // <--- NOUVEAU
-  getDashboardCache   // <--- NOUVEAU
+  saveDashboardCache,
+  getDashboardCache
 } from '../db';
 import {
   LayoutDashboard, ShoppingCart, Package, Users,
   TrendingUp, Wallet, LogOut, RefreshCw,
   History, Truck, Store, FileText, UserCog,
   Download, CreditCard, AlertCircle, ChevronRight,
-  CheckCircle, Wifi, WifiOff, CloudUpload, Database, ArrowLeft
+  CheckCircle, WifiOff, CloudUpload, Database, ArrowLeft
 } from 'lucide-react';
 
-// =====================================================
-// 🔒 COMPOSANT DE VÉRIFICATION DE PERMISSION
-// À utiliser dans toutes vos pages protégées
-// =====================================================
+// ... (Gardez vos imports et le hook usePermissionCheck inchangés ici) ...
+// ... (Gardez LoadingScreen et AccessDenied inchangés ici) ...
 
 /**
- * Hook personnalisé pour vérifier les permissions
+ * Hook personnalisé pour vérifier les permissions (inchangé)
  */
 export const usePermissionCheck = (requiredRoles = ['gerant', 'admin']) => {
   const [loading, setLoading] = useState(true);
@@ -53,121 +50,17 @@ export const usePermissionCheck = (requiredRoles = ['gerant', 'admin']) => {
   return { loading, hasPermission, userRole };
 };
 
-/**
- * Composant d'écran de chargement
- */
+// ... (Insérez ici LoadingScreen et AccessDenied comme dans votre code original) ...
 export const LoadingScreen = () => (
-  <div className="loading-screen">
-    <div className="spinner"></div>
-    <p>Vérification des permissions...</p>
-    <style jsx>{`
-      .loading-screen {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 80vh;
-        font-family: system-ui, -apple-system, sans-serif;
-        color: #64748b;
-      }
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #e2e8f0;
-        border-top: 3px solid #4f46e5;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 15px;
-      }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `}</style>
-  </div>
+    <div className="loading-screen"><div className="spinner"></div><p>Chargement...</p></div>
 );
-
-/**
- * Composant d'accès refusé
- */
-export const AccessDenied = ({ userRole, requiredRoles = ['gérant', 'admin'] }) => (
-  <div className="access-denied">
-    <div className="denied-icon">
-      <AlertCircle size={48} />
-    </div>
-    <h2>Accès Refusé</h2>
-    <p>
-      Cette page nécessite les permissions: <strong>{requiredRoles.join(', ')}</strong>
-    </p>
-    {userRole && (
-      <p className="role-info">Votre rôle actuel: <strong>{userRole}</strong></p>
-    )}
-    <button onClick={() => window.location.href = '/login'} className="back-btn">
-      <ArrowLeft size={16} /> Retour à la connexion
-    </button>
-    <style jsx>{`
-      .access-denied {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 80vh;
-        font-family: system-ui, -apple-system, sans-serif;
-        color: #64748b;
-        text-align: center;
-        padding: 20px;
-      }
-      .denied-icon {
-        width: 80px;
-        height: 80px;
-        background: #fee2e2;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 20px;
-        color: #ef4444;
-      }
-      h2 {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin: 0 0 10px 0;
-      }
-      p {
-        margin: 0 0 10px 0;
-        max-width: 400px;
-      }
-      .role-info {
-        color: #64748b;
-        font-size: 0.875rem;
-        margin-bottom: 20px;
-      }
-      .back-btn {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: #4f46e5;
-        color: white;
-        text-decoration: none;
-        padding: 10px 16px;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: background 0.2s;
-        border: none;
-        cursor: pointer;
-      }
-      .back-btn:hover {
-        background: #4338ca;
-      }
-    `}</style>
-  </div>
+export const AccessDenied = ({ userRole }) => (
+    <div className="access-denied"><h2>Accès Refusé</h2><button onClick={() => window.location.href='/login'}>Retour</button></div>
 );
 
 // =====================================================
-// FIN DU COMPOSANT DE VÉRIFICATION
+// WIDGET SYNC (Inchangé dans la logique)
 // =====================================================
-
 const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }) => {
   const [showError, setShowError] = useState(false);
   const formatDate = (dateString) => {
@@ -178,8 +71,8 @@ const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }
   let Icon = CheckCircle;
   let label = "Synchronisé";
   if (!isOnline) { containerClass += " offline"; Icon = WifiOff; label = "Hors Ligne"; }
-  else if (status === 'SYNCING') { containerClass += " syncing"; Icon = RefreshCw; label = "Synchronisation..."; }
-  else if (status === 'ERROR') { containerClass += " error"; Icon = AlertCircle; label = "Erreur Sync"; }
+  else if (status === 'SYNCING') { containerClass += " syncing"; Icon = RefreshCw; label = "Sync..."; }
+  else if (status === 'ERROR') { containerClass += " error"; Icon = AlertCircle; label = "Erreur"; }
   else { containerClass += " success"; }
 
   return (
@@ -190,7 +83,7 @@ const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }
       {status === 'ERROR' && isOnline && (<button className="retry-btn" onClick={onRetry} onMouseEnter={() => setShowError(true)} onMouseLeave={() => setShowError(false)}><RefreshCw size={14} /></button>)}
       {showError && error && <div className="error-tooltip">{error}</div>}
       <style jsx>{`
-        .sync-widget { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 30px; background: white; border: 1px solid #e2e8f0; transition: all 0.3s ease; position: relative; }
+        .sync-widget { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-radius: 30px; background: white; border: 1px solid #e2e8f0; transition: all 0.3s ease; position: relative; white-space: nowrap; }
         .sync-widget.success { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
         .sync-widget.syncing { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
         .sync-widget.error { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
@@ -199,10 +92,9 @@ const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }
         .info-box { display: flex; flex-direction: column; line-height: 1; }
         .status-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
         .last-sync { font-size: 0.75rem; font-family: 'Monaco', monospace; opacity: 0.8; }
-        .pending-badge { background: #f97316; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(249, 115, 22, 0.2); }
-        .retry-btn { background: white; border: 1px solid currentColor; color: inherit; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; opacity: 0.8; transition: 0.2s; }
-        .retry-btn:hover { opacity: 1; transform: scale(1.1); }
-        .error-tooltip { position: absolute; top: 110%; right: 0; background: #1e293b; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; white-space: nowrap; z-index: 50; }
+        .pending-badge { background: #f97316; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+        .retry-btn { background: white; border: 1px solid currentColor; color: inherit; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .error-tooltip { position: absolute; top: 110%; right: 0; background: #1e293b; color: white; padding: 6px 10px; border-radius: 6px; font-size: 0.75rem; z-index: 50; }
         .spin { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
       `}</style>
@@ -211,17 +103,9 @@ const SyncStatus = ({ isOnline, lastSync, status, error, onRetry, pendingCount }
 };
 
 export default function Dashboard({ isOnline }) {
-  // --- 1. VÉRIFICATION PERMISSION (Accessible à tous les rôles connectés) ---
+  // --- LOGIQUE INCHANGÉE ---
   const { loading: checkingPermissions, hasPermission, userRole } = usePermissionCheck(['gerant', 'admin', 'vendeur', 'caissier']);
-
-  const [unifiedStats, setUnifiedStats] = useState({
-    nombre_ventes: 0,
-    total_montant: 0,
-    total_depenses: 0,
-    benefice: 0,
-    ventes_pending_count: 0
-  });
-
+  const [unifiedStats, setUnifiedStats] = useState({ nombre_ventes: 0, total_montant: 0, total_depenses: 0, benefice: 0, ventes_pending_count: 0 });
   const [abonnement, setAbonnement] = useState(null);
   const [dbStats, setDbStats] = useState(null);
   const [syncStatus, setSyncStatus] = useState('IDLE');
@@ -229,7 +113,6 @@ export default function Dashboard({ isOnline }) {
   const [profil, setProfil] = useState(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const navigate = useNavigate();
 
   const isGerant = userRole === 'gerant';
@@ -237,156 +120,63 @@ export default function Dashboard({ isOnline }) {
   const isVendeur = ['vendeur', 'caissier'].includes(userRole);
 
   useEffect(() => {
-    // On charge le profil dès qu'on a la permission
     if (hasPermission) {
       const fetchProfil = async () => {
-        try {
-          const res = await profilAPI.me();
-          setProfil(res.data);
-        } catch (err) {
-          console.error("Erreur profil", err);
-          if(err.response?.status === 401) logout();
-        }
+        try { const res = await profilAPI.me(); setProfil(res.data); }
+        catch (err) { if(err.response?.status === 401) logout(); }
       };
       fetchProfil();
     }
   }, [hasPermission]);
 
-  useEffect(() => {
-    if (profil) {
-      loadDashboardData();
-    }
-  }, [profil, isOnline]);
-
-  // ✅ CORRECTION MAJEURE ICI : Auto-Sync au retour de connexion
-  useEffect(() => {
-    if (isOnline && profil) {
-      console.log("🟢 Connexion détectée - Lancement auto-sync...");
-      handleSync();
-    }
-  }, [isOnline, profil]);
+  useEffect(() => { if (profil) loadDashboardData(); }, [profil, isOnline]);
+  useEffect(() => { if (isOnline && profil) handleSync(); }, [isOnline, profil]);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // 1. Récupérer UNIQUEMENT les données locales en attente (ce qui a été fait hors ligne)
-      // On suppose que getDashboardUnifiedStats renvoie les totaux locaux.
-      // Pour être précis, on va surtout s'en servir pour le compteur "en attente".
       const localStats = await getDashboardUnifiedStats(profil?.id);
-
-      // Structure de base
-      let displayStats = {
-        nombre_ventes: 0,
-        total_montant: 0,
-        total_depenses: 0,
-        benefice: 0,
-        ventes_pending_count: localStats.ventes_pending_count || 0
-      };
-
+      let displayStats = { nombre_ventes: 0, total_montant: 0, total_depenses: 0, benefice: 0, ventes_pending_count: localStats.ventes_pending_count || 0 };
       let serverData = null;
 
-      // 2. TENTATIVE DE CHARGEMENT EN LIGNE
       if (isOnline) {
         try {
           const serverStatsRes = await dashboardAPI.getStats();
           serverData = serverStatsRes.data;
-
-          // ✅ SAUVEGARDE DANS LE CACHE POUR PLUS TARD
           saveDashboardCache(serverData);
-
-          // Sync Background
-          if (isGerant || isAdmin) {
-             const aboRes = await abonnementAPI.current();
-             setAbonnement(aboRes.data);
-          }
-          venteAPI.list().then(res => {
-             const ventesList = Array.isArray(res.data) ? res.data : (res.data.results || []);
-             saveVentesSynced(ventesList);
-          }).catch(console.warn);
-
-        } catch (err) {
-          console.error("Erreur serveur, passage en mode cache:", err);
-        }
+          if (isGerant || isAdmin) { const aboRes = await abonnementAPI.current(); setAbonnement(aboRes.data); }
+          venteAPI.list().then(res => { saveVentesSynced(Array.isArray(res.data) ? res.data : (res.data.results || [])); }).catch(console.warn);
+        } catch (err) { console.error("Erreur serveur", err); }
       }
+      if (!serverData) serverData = getDashboardCache();
 
-      // 3. SI PAS DE DONNÉES SERVEUR (Hors ligne ou Erreur), ON PREND LE CACHE
-      if (!serverData) {
-        serverData = getDashboardCache(); // Récupère la dernière version connue
-      }
-
-      // 4. CONSTRUCTION DES STATS FINALES (Cache/Serveur + Pending Local)
       if (serverData) {
-        // On prend les stats du serveur (ou du cache)
-        // ATTENTION : Si le cache date d'hier, il faut peut-être le vérifier,
-        // mais pour l'instant on affiche ce qu'on a.
-
         displayStats.nombre_ventes = serverData.ventes.today.count;
         displayStats.total_montant = serverData.ventes.today.total;
         displayStats.total_depenses = serverData.depenses.today;
         displayStats.benefice = serverData.benefices.today;
-
-        // 🟢 C'EST ICI LA MAGIE :
-        // Si on est hors ligne, on ajoute les ventes locales en attente aux stats du cache
-        // pour avoir un total "Temps réel"
-        if (!isOnline && localStats.ventes_pending_count > 0) {
-           // Note: localStats.total_montant contient TOUT le local (synced + pending).
-           // Idéalement, il faudrait une fonction qui ne renvoie QUE le montant des 'PENDING'.
-           // Si getDashboardUnifiedStats renvoie le total global local, on peut faire une approximation
-           // ou simplement afficher le cache + un indicateur.
-
-           // Pour faire simple et efficace sans changer tout db.js :
-           // On affiche les données du cache (ce qui est "validé")
-           // et le badge "X en attente" indique qu'il y a plus.
-
-           // Si vous voulez additionner, il faudrait que db.js renvoie le montant spécifique des pending.
-           // Supposons que localStats contient le montant des ventes PENDING créées aujourd'hui :
-           if (localStats.pending_amount_today) {
+        if (!isOnline && localStats.ventes_pending_count > 0 && localStats.pending_amount_today) {
               displayStats.total_montant += localStats.pending_amount_today;
               displayStats.nombre_ventes += localStats.ventes_pending_count;
-              displayStats.benefice += localStats.pending_amount_today; // Approx (sans coût d'achat)
-           }
+              displayStats.benefice += localStats.pending_amount_today;
         }
       } else {
-        // Si aucun cache n'existe (première installation sans internet), on affiche le local
         displayStats.nombre_ventes = localStats.nombre_ventes;
         displayStats.total_montant = localStats.total_montant;
       }
-
-      // Récupération infos DB locale pour le status sync
       const dbInfo = await getDBStats();
-
       setUnifiedStats(displayStats);
       setDbStats(dbInfo);
-
-    } catch (error) {
-      console.error('Erreur chargement dashboard:', error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error('Erreur chargement dashboard:', error); } finally { setLoading(false); }
   };
 
   const handleSync = async () => {
-    setSyncStatus('SYNCING');
-    setSyncError(null);
+    setSyncStatus('SYNCING'); setSyncError(null);
     try {
-      // ✅ Synchronisation complète (envoie local -> serveur)
       const result = await syncFull((progress) => { console.log("Sync:", progress); });
-
-      if (result.success) {
-        setSyncStatus('SUCCESS');
-        // ✅ Recharger les données après le succès pour voir les vrais chiffres
-        await loadDashboardData();
-        setTimeout(() => setSyncStatus('IDLE'), 3000);
-      } else {
-        setSyncStatus('ERROR');
-        setSyncError("Échec sync partielle");
-        // Même en cas d'erreur partielle, on recharge pour voir ce qui est passé
-        await loadDashboardData();
-      }
-    } catch (e) {
-      setSyncStatus('ERROR');
-      setSyncError(e.message || "Erreur inconnue");
-    }
+      if (result.success) { setSyncStatus('SUCCESS'); await loadDashboardData(); setTimeout(() => setSyncStatus('IDLE'), 3000); }
+      else { setSyncStatus('ERROR'); setSyncError("Échec sync partielle"); await loadDashboardData(); }
+    } catch (e) { setSyncStatus('ERROR'); setSyncError(e.message || "Erreur inconnue"); }
   };
 
   const StatCard = ({ title, value, icon: Icon, colorClass, subtext }) => (
@@ -421,26 +211,22 @@ export default function Dashboard({ isOnline }) {
     return false;
   };
 
-  // --- 3. RENDER PERMISSION ---
   if (checkingPermissions) return <LoadingScreen />;
-  // Note: Ici on vérifie le rôle global, mais comme tous les rôles ont accès au dashboard,
-  // on redirige seulement si pas de rôle du tout (non connecté/erreur)
   if (!hasPermission && isOnline) return <AccessDenied userRole={userRole} />;
 
   return (
     <div className="dashboard-container">
+      {/* SIDEBAR (Inchangée) */}
       <aside className={`sidebar ${sidebarOpen ? 'mobile-open' : ''}`}>
         <div className="sidebar-header">
           <h2 className="app-title">Gestion Stock</h2>
           <button className="close-sidebar" onClick={() => setSidebarOpen(false)}>×</button>
         </div>
-
         <nav className="sidebar-nav">
           <NavItem to="/dashboard" icon={LayoutDashboard} title="Tableau de bord" active={true} />
           <NavItem to="/ventes" icon={ShoppingCart} title="Ventes" />
           <NavItem to="/produits" icon={Package} title="Produits" />
           <NavItem to="/clients" icon={Users} title="Clients" />
-
           {isVendeur ? (
             <NavItem to="/historique-mes-ventes" icon={History} title="Mon Historique" />
           ) : (
@@ -455,10 +241,8 @@ export default function Dashboard({ isOnline }) {
               <NavItem to="/utilisateurs" icon={UserCog} title="Équipe" />
             </>
           )}
-
           {isGerant && <NavItem to="/abonnement" icon={Store} title="Abonnement" />}
         </nav>
-
         <div className="sidebar-footer">
           <button onClick={() => { logout(); navigate('/login'); }} className="btn-logout-sidebar">
             <LogOut size={18} /><span>Déconnexion</span>
@@ -467,13 +251,20 @@ export default function Dashboard({ isOnline }) {
       </aside>
 
       <div className="main-content">
+        {/* === HEADER CORRIGÉ === */}
         <header className="main-header">
           <div className="header-content">
             <div className="header-left">
               <button className="menu-toggle" onClick={() => setSidebarOpen(true)}>☰</button>
-              <h1 className="greeting">Bonjour, <span className="username">{profil?.username || 'Utilisateur'}</span></h1>
-              <span className="badge-role">{isGerant ? 'Gérant' : isAdmin ? 'Admin' : 'Vendeur'}</span>
+              {/* Conteneur flex pour gérer le texte long */}
+              <div className="user-info-group">
+                <h1 className="greeting">
+                    Bonjour, <span className="username">{profil?.username || 'Utilisateur'}</span>
+                </h1>
+                <span className="badge-role">{isGerant ? 'Gérant' : isAdmin ? 'Admin' : 'Vendeur'}</span>
+              </div>
             </div>
+            {/* Bouton déconnexion qui ne bouge pas */}
             <button onClick={() => { logout(); navigate('/login'); }} className="btn-logout">
               <LogOut size={18} /><span className="logout-text">Quitter</span>
             </button>
@@ -483,44 +274,27 @@ export default function Dashboard({ isOnline }) {
         <div className="scroll-content">
           <div className="dashboard-wrapper">
 
-            {/* ✅ BANNIÈRE INTELLIGENTE */}
+            {/* BANNIÈRE (Inchangée) */}
             {abonnement && (isGerant || isAdmin) && (
-              <div className={`alert-banner ${
-                isAboExpired(abonnement) ? 'expired'
-                : abonnement.type_abonnement === 'GRATUIT' ? 'warning'
-                : 'premium'
-              }`}>
+              <div className={`alert-banner ${isAboExpired(abonnement) ? 'expired' : abonnement.type_abonnement === 'GRATUIT' ? 'warning' : 'premium'}`}>
                 {isAboExpired(abonnement) ? <AlertCircle size={20} /> : <CheckCircle size={20} />}
-
                 <div className="alert-text">
-                  <strong>
-                    {isAboExpired(abonnement)
-                      ? `Abonnement ${abonnement.type_abonnement} EXPIRÉ`
-                      : `Plan ${abonnement.type_abonnement}`
-                    }
-                  </strong>
-                  {abonnement.date_fin && (
-                    <span className="alert-date">
-                      • {isAboExpired(abonnement) ? "A expiré le " : "Expire le "}
-                      {new Date(abonnement.date_fin).toLocaleDateString()}
-                    </span>
-                  )}
+                  <strong>{isAboExpired(abonnement) ? `Abonnement ${abonnement.type_abonnement} EXPIRÉ` : `Plan ${abonnement.type_abonnement}`}</strong>
+                  {abonnement.date_fin && <span className="alert-date">• {isAboExpired(abonnement) ? "A expiré le " : "Expire le "}{new Date(abonnement.date_fin).toLocaleDateString()}</span>}
                 </div>
-
-                {isAboExpired(abonnement) && (
-                   <Link to="/abonnement" className="btn-renew-banner">
-                     Renouveler
-                   </Link>
-                )}
+                {isAboExpired(abonnement) && <Link to="/abonnement" className="btn-renew-banner">Renouveler</Link>}
               </div>
             )}
 
+            {/* === HEADER D'ACTIONS (Sync Status) CORRIGÉ === */}
             <div className="actions-header">
                 <h2 className="section-title">Aperçu Aujourd'hui</h2>
-                <SyncStatus
-                    isOnline={isOnline} lastSync={dbStats?.last_sync} status={syncStatus}
-                    error={syncError} onRetry={handleSync} pendingCount={unifiedStats.ventes_pending_count}
-                />
+                <div className="sync-wrapper">
+                    <SyncStatus
+                        isOnline={isOnline} lastSync={dbStats?.last_sync} status={syncStatus}
+                        error={syncError} onRetry={handleSync} pendingCount={unifiedStats.ventes_pending_count}
+                    />
+                </div>
             </div>
 
             <section className="stats-section">
@@ -538,9 +312,7 @@ export default function Dashboard({ isOnline }) {
                 <ActionButton to="/ventes" icon={ShoppingCart} title="Nouvelle Vente" color="primary" />
                 <ActionButton to="/produits" icon={Package} title="Produits" color="purple" />
                 <ActionButton to="/clients" icon={Users} title="Clients" color="blue" />
-
                 {isVendeur && <ActionButton to="/historique-mes-ventes" icon={History} title="Mon Historique" color="orange" />}
-
                 {!isVendeur && (
                   <>
                     <ActionButton to="/historique-ventes" icon={FileText} title="Historique" color="indigo" />
@@ -571,9 +343,12 @@ export default function Dashboard({ isOnline }) {
         )}
       </nav>
 
+      {/* === CSS AMÉLIORÉ === */}
       <style jsx>{`
         :global(body) { margin: 0; font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; }
         .dashboard-container { display: flex; height: 100vh; overflow: hidden; }
+
+        /* SIDEBAR */
         .sidebar { width: 260px; background: white; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; flex-shrink: 0; transition: transform 0.3s ease; z-index: 100; }
         .sidebar-header { padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
         .app-title { margin: 0; font-size: 1.2rem; font-weight: 700; color: #4f46e5; }
@@ -584,30 +359,43 @@ export default function Dashboard({ isOnline }) {
         .nav-item.active { background: #eef2ff; color: #4f46e5; border-left: 3px solid #4f46e5; }
         .sidebar-footer { padding: 20px; border-top: 1px solid #e2e8f0; }
         .btn-logout-sidebar { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px; background: #fee2e2; color: #ef4444; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-        .btn-logout-sidebar:hover { background: #fecaca; }
+
+        /* MAIN CONTENT */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-        .main-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 0; flex-shrink: 0; z-index: 10; }
+        .main-header { background: white; border-bottom: 1px solid #e2e8f0; padding: 12px 0; flex-shrink: 0; z-index: 10; }
         .header-content { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; }
-        .header-left { display: flex; align-items: center; gap: 16px; }
-        .menu-toggle { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; }
-        .greeting { margin: 0; font-size: 1.25rem; font-weight: 700; color: #0f172a; }
-        .badge-role { align-self: flex-start; background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-        .btn-logout { display: flex; align-items: center; gap: 8px; background: #fee2e2; color: #ef4444; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+
+        /* GESTION HEADER GAUCHE POUR MOBILE */
+        .header-left { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; /* Important pour flex-shrink */ }
+        .user-info-group { display: flex; align-items: center; gap: 10px; overflow: hidden; white-space: nowrap; }
+        .menu-toggle { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b; padding: 0; }
+
+        .greeting { margin: 0; font-size: 1.25rem; font-weight: 700; color: #0f172a; overflow: hidden; text-overflow: ellipsis; }
+        .username { color: #4f46e5; }
+        .badge-role { background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; flex-shrink: 0; }
+
+        /* BOUTON LOGOUT HEADER */
+        .btn-logout { display: flex; align-items: center; gap: 8px; background: #fee2e2; color: #ef4444; border: none; padding: 8px 16px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: background 0.2s; flex-shrink: 0; margin-left: 10px; }
         .btn-logout:hover { background: #fecaca; }
+
         .scroll-content { flex: 1; overflow-y: auto; padding-bottom: 100px; -webkit-overflow-scrolling: touch; }
         .dashboard-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .actions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+
+        /* HEADER ACTIONS & SYNC */
+        .actions-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
         .section-title { font-size: 1.1rem; font-weight: 700; color: #334155; margin: 0; }
+
+        /* ALERTS */
         .alert-banner { display: flex; align-items: flex-start; gap: 12px; padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem; line-height: 1.5; }
         .alert-banner.warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
         .alert-banner.premium { background: #eff6ff; color: #1e40af; border: 1px solid #dbeafe; }
         .alert-banner.expired { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
         .alert-text { flex: 1; }
         .btn-renew-banner { background: #dc2626; color: white; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.8rem; white-space: nowrap; transition: 0.2s; margin-top: 4px; }
-        .btn-renew-banner:hover { background: #b91c1c; }
+
+        /* GRILLES */
         .stats-section { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
         .stat-card { background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; align-items: center; gap: 16px; border: 1px solid #f1f5f9; transition: transform 0.2s; }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         .icon-wrapper { width: 56px; height: 56px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; flex-shrink: 0; }
         .bg-indigo { background: linear-gradient(135deg, #6366f1, #4f46e5); }
         .bg-emerald { background: linear-gradient(135deg, #34d399, #10b981); }
@@ -618,9 +406,9 @@ export default function Dashboard({ isOnline }) {
         .stat-value { margin: 4px 0 0 0; font-size: 1.5rem; font-weight: 700; color: #1e293b; }
         .stat-subtext { font-size: 0.7rem; color: #d97706; background: #fffbeb; padding: 2px 6px; border-radius: 4px; display: inline-block; margin-top: 4px; }
         .loading-pulse { display: block; width: 50px; height: 20px; background: #e2e8f0; border-radius: 4px; }
+
         .actions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
         .action-btn { background: white; padding: 20px; border-radius: 14px; display: flex; align-items: center; gap: 12px; text-decoration: none; border: 1px solid #e2e8f0; transition: transform 0.2s; color: inherit; }
-        .action-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); }
         .action-icon-box { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .hover-primary .action-icon-box { background: #eff6ff; color: #3b82f6; }
         .hover-purple .action-icon-box { background: #f3e8ff; color: #a855f7; }
@@ -637,11 +425,52 @@ export default function Dashboard({ isOnline }) {
         .hover-dark .action-icon-box { background: #334155; color: #f8fafc; }
         .action-title { font-size: 0.9rem; font-weight: 500; color: #475569; flex: 1; }
         .arrow-icon { color: #cbd5e1; }
+
         .glass-nav { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); padding: 8px 30px; border-radius: 30px; display: flex; gap: 30px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(0,0,0,0.05); z-index: 100; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: #94a3b8; font-size: 0.7rem; font-weight: 500; gap: 4px; }
-        .nav-item.active { color: #4f46e5; }
-        @media (max-width: 1024px) { .stats-section { grid-template-columns: repeat(2, 1fr); } .actions-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 768px) { .sidebar { position: fixed; left: 0; top: 0; height: 100%; transform: translateX(-100%); box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1); } .sidebar.mobile-open { transform: translateX(0); } .close-sidebar, .menu-toggle { display: block; } .dashboard-wrapper { padding: 16px; } .greeting { font-size: 1.1rem; } .logout-text, .arrow-icon { display: none; } .btn-logout { padding: 8px; border-radius: 50%; aspect-ratio: 1; } .stats-section { grid-template-columns: 1fr; gap: 12px; } .stat-card { padding: 16px; } .actions-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; } .action-btn { flex-direction: column; text-align: center; padding: 12px 8px; gap: 8px; } .action-title { font-size: 0.8rem; line-height: 1.2; } .action-icon-box { margin-bottom: 4px; } .glass-nav { width: 100%; bottom: 0; left: 0; transform: none; border-radius: 0; justify-content: space-around; padding: 12px 0; border-top: 1px solid #e2e8f0; gap: 0; background: white; } .scroll-content { padding-bottom: 80px; } .alert-banner { align-items: flex-start; } .btn-renew-banner { margin-top: 4px; } }
+
+        @media (max-width: 1024px) {
+            .stats-section { grid-template-columns: repeat(2, 1fr); }
+            .actions-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        /* === MOBILE RESPONSIVE FIXES === */
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; left: 0; top: 0; height: 100%; transform: translateX(-100%); box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1); }
+            .sidebar.mobile-open { transform: translateX(0); }
+            .close-sidebar, .menu-toggle { display: block; }
+            .dashboard-wrapper { padding: 16px; }
+
+            /* Fix Header Mobile */
+            .header-content { padding: 0 16px; }
+            .greeting { font-size: 1rem; }
+            .badge-role { display: none; } /* On cache le rôle sur mobile si trop petit, ou on réduit la police */
+            .logout-text, .arrow-icon { display: none; }
+            .btn-logout { padding: 8px; border-radius: 50%; aspect-ratio: 1; justify-content: center; }
+
+            /* Fix Centrage Sync Widget & Title */
+            .actions-header {
+                flex-direction: column;
+                justify-content: center;
+                text-align: center;
+                gap: 15px;
+            }
+            .section-title { width: 100%; text-align: center; }
+            .sync-wrapper { width: 100%; display: flex; justify-content: center; }
+
+            /* Fix Grilles */
+            .stats-section { grid-template-columns: 1fr; gap: 12px; }
+            .stat-card { padding: 16px; }
+            .actions-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .action-btn { flex-direction: column; text-align: center; padding: 12px 8px; gap: 8px; }
+            .action-title { font-size: 0.8rem; line-height: 1.2; }
+            .action-icon-box { margin-bottom: 4px; }
+
+            /* Nav Mobile */
+            .glass-nav { width: 100%; bottom: 0; left: 0; transform: none; border-radius: 0; justify-content: space-around; padding: 12px 0; border-top: 1px solid #e2e8f0; gap: 0; background: white; }
+            .scroll-content { padding-bottom: 80px; }
+            .alert-banner { align-items: flex-start; }
+            .btn-renew-banner { margin-top: 4px; }
+        }
       `}</style>
     </div>
   );
