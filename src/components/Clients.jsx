@@ -357,30 +357,34 @@ export default function Clients({ isOnline }) {
             <p className="subtitle">{filteredClients.length} clients enregistrés</p>
           </div>
         </div>
-        {isOnline && canEdit && (
-          <button className="btn-add" onClick={() => { resetForm(); setShowForm(true); }}>
-            <Plus size={20} />
-            <span className="btn-text">Nouveau</span>
-          </button>
-        )}
       </header>
 
       <div className="content-wrapper">
-        {/* BARRE DE RECHERCHE */}
-        <div className="search-container">
-          <Search className="search-icon" size={20} />
-          <input
-            type="text"
-            placeholder="Rechercher (nom, téléphone, email)..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            disabled={loading}
-          />
-          {searchTerm && (
-            <button className="clear-search" onClick={() => setSearchTerm('')}>
-              <X size={16} />
+        {/* SECTION AVEC BOUTON NOUVEAU ET RECHERCHE */}
+        <div className="action-section">
+          {isOnline && canEdit && (
+            <button className="btn-new" onClick={() => { resetForm(); setShowForm(true); }}>
+              <Plus size={20} />
+              <span className="btn-text">Nouveau</span>
             </button>
           )}
+
+          {/* BARRE DE RECHERCHE */}
+          <div className="search-container">
+            <Search className="search-icon" size={20} />
+            <input
+              type="text"
+              placeholder="Rechercher (nom, téléphone, email)..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              disabled={loading}
+            />
+            {searchTerm && (
+              <button className="clear-search" onClick={() => setSearchTerm('')}>
+                <X size={16} />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* MESSAGES ALERTE */}
@@ -614,25 +618,38 @@ export default function Clients({ isOnline }) {
           color: #64748b;
         }
 
-        .btn-add {
+        /* --- SECTION ACTION --- */
+        .action-section {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+
+        .btn-new {
           background: #4f46e5;
           color: white;
           border: none;
-          padding: 10px 16px;
+          padding: 12px 20px;
           border-radius: 10px;
           font-weight: 600;
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
           cursor: pointer;
           transition: 0.2s;
           box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+          width: 100%;
+          max-width: 200px;
+          align-self: center;
         }
-        .btn-add:hover:not(:disabled) {
+        .btn-new:hover:not(:disabled) {
           background: #4338ca;
           transform: translateY(-1px);
+          box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.3);
         }
-        .btn-add:disabled {
+        .btn-new:disabled {
           background: #cbd5e1;
           cursor: not-allowed;
           box-shadow: none;
@@ -648,7 +665,6 @@ export default function Clients({ isOnline }) {
         /* SEARCH */
         .search-container {
           position: relative;
-          margin-bottom: 24px;
         }
         .search-icon {
           position: absolute;
@@ -1048,8 +1064,14 @@ export default function Clients({ isOnline }) {
             display: none;
           }
 
-          .btn-add {
-            padding: 10px;
+          .btn-new {
+            padding: 12px;
+            width: 100%;
+            max-width: none;
+          }
+
+          .action-section {
+            gap: 12px;
           }
 
           .content-wrapper {
@@ -1062,42 +1084,34 @@ export default function Clients({ isOnline }) {
           }
 
           .client-card {
-            flex-direction: row;
-            flex-wrap: wrap;
-            align-items: flex-start;
+            flex-direction: column;
           }
 
           .card-top {
-            padding: 16px 0 0 16px;
-            margin-right: 12px;
-            width: auto;
+            padding: 20px 20px 0;
           }
 
           .avatar-placeholder {
-            width: 48px;
-            height: 48px;
-            font-size: 1.2rem;
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
           }
 
           .card-info {
-            padding: 16px 16px 8px 0;
-            text-align: left;
-            flex: 1;
+            padding: 16px 20px 8px;
+            text-align: center;
           }
 
           .badges {
-            justify-content: flex-start;
+            justify-content: center;
           }
 
           .card-details {
-            padding: 0 16px 12px;
-            width: 100%;
-            order: 3;
+            padding: 0 20px 16px;
           }
 
           .card-actions-footer {
             width: 100%;
-            order: 4;
           }
 
           .modal-content {
@@ -1116,6 +1130,22 @@ export default function Clients({ isOnline }) {
 
         /* Moyens écrans (tablettes) */
         @media (min-width: 481px) and (max-width: 768px) {
+          .action-section {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+          }
+
+          .btn-new {
+            width: auto;
+            max-width: 180px;
+          }
+
+          .search-container {
+            flex: 1;
+            margin-left: 16px;
+          }
+
           .clients-grid {
             grid-template-columns: repeat(2, 1fr);
           }
@@ -1127,6 +1157,23 @@ export default function Clients({ isOnline }) {
 
         /* Grands écrans (desktop) */
         @media (min-width: 769px) {
+          .action-section {
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+          }
+
+          .btn-new {
+            width: auto;
+            max-width: 200px;
+          }
+
+          .search-container {
+            flex: 1;
+            max-width: 500px;
+            margin-left: 24px;
+          }
+
           .mobile-nav {
             display: none;
           }
@@ -1144,6 +1191,10 @@ export default function Clients({ isOnline }) {
         @media (min-width: 1200px) {
           .content-wrapper {
             max-width: 1400px;
+          }
+
+          .search-container {
+            max-width: 600px;
           }
 
           .clients-grid {
