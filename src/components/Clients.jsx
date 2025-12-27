@@ -612,10 +612,42 @@ export default function Clients({ isOnline }) {
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
         @media (max-width: 640px) {
-          .page-header { flex-direction: column; align-items: flex-start; gap: 16px; padding: 16px; }
-          .header-right { width: 100%; display: flex; justify-content: flex-end; }
-          .clients-grid { grid-template-columns: 1fr; }
+          /* MODIFICATIONS POUR CENTRER LE CONTENU EN MOBILE */
+          .page-header { flex-direction: column; align-items: center; text-align: center; gap: 16px; padding: 16px; }
+          .header-left { flex-direction: column; align-items: center; gap: 16px; }
+          .header-right { width: 100%; display: flex; justify-content: center; }
+
+          .content-wrapper { padding: 0 16px; margin: 20px auto; }
+
+          /* Centrer les éléments de recherche */
+          .search-section { display: flex; justify-content: center; }
+          .input-wrapper.search { width: 100%; max-width: 500px; }
+
+          /* Centrer la grille des clients */
+          .clients-grid { grid-template-columns: 1fr; justify-items: center; }
+          .client-card { width: 100%; max-width: 400px; }
+
+          /* Centrer le message d'état vide */
+          .empty-state { text-align: center; display: flex; flex-direction: column; align-items: center; }
+
+          /* Centrer le spinner de chargement */
+          .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
           .form-grid { grid-template-columns: 1fr; }
+
+          /* Centrer le bouton "Nouveau" */
+          .btn-primary { width: 100%; max-width: 200px; justify-content: center; }
+
+          /* Centrer les boutons d'action dans la carte */
+          .card-actions { justify-content: center; }
+          .btn-action { min-width: 120px; }
+        }
+
+        /* Pour les très petits écrans */
+        @media (max-width: 380px) {
+          .client-card { max-width: 100%; }
+          .card-actions { flex-direction: column; gap: 8px; }
+          .btn-action { width: 100%; }
         }
       `}</style>
     </div>
