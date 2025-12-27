@@ -350,9 +350,9 @@ export default function Clients({ isOnline }) {
     <div className="page-container">
       {/* HEADER FIXE */}
       <header className="header">
-        <div className="header-left">
+        <div className="header-content">
           <Link to="/dashboard" className="back-btn"><ArrowLeft size={20}/></Link>
-          <div>
+          <div className="header-text">
             <h1>Clients</h1>
             <p className="subtitle">{filteredClients.length} clients enregistrés</p>
           </div>
@@ -580,18 +580,17 @@ export default function Clients({ isOnline }) {
         .header {
           background: white;
           border-bottom: 1px solid #e2e8f0;
-          padding: 16px 24px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
+          padding: 16px 20px;
           position: sticky;
           top: 0;
           z-index: 10;
         }
-        .header-left {
+        .header-content {
           display: flex;
           align-items: center;
           gap: 16px;
+          max-width: 800px;
+          margin: 0 auto;
         }
         .back-btn {
           color: #64748b;
@@ -601,10 +600,15 @@ export default function Clients({ isOnline }) {
           display: flex;
           align-items: center;
           transition: 0.2s;
+          flex-shrink: 0;
         }
         .back-btn:hover {
           background: #e2e8f0;
           color: #0f172a;
+        }
+        .header-text {
+          flex: 1;
+          text-align: center;
         }
         .header h1 {
           margin: 0;
@@ -618,10 +622,18 @@ export default function Clients({ isOnline }) {
           color: #64748b;
         }
 
-        /* --- SECTION ACTION --- */
+        /* --- CONTENT --- */
+        .content-wrapper {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 20px;
+        }
+
+        /* SECTION ACTION */
         .action-section {
           display: flex;
           flex-direction: column;
+          align-items: center;
           gap: 16px;
           margin-bottom: 24px;
         }
@@ -630,19 +642,15 @@ export default function Clients({ isOnline }) {
           background: #4f46e5;
           color: white;
           border: none;
-          padding: 12px 20px;
+          padding: 12px 24px;
           border-radius: 10px;
           font-weight: 600;
           display: flex;
           align-items: center;
-          justify-content: center;
           gap: 8px;
           cursor: pointer;
           transition: 0.2s;
           box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
-          width: 100%;
-          max-width: 200px;
-          align-self: center;
         }
         .btn-new:hover:not(:disabled) {
           background: #4338ca;
@@ -655,16 +663,10 @@ export default function Clients({ isOnline }) {
           box-shadow: none;
         }
 
-        /* --- CONTENT --- */
-        .content-wrapper {
-          max-width: 1200px;
-          margin: 24px auto;
-          padding: 0 20px;
-        }
-
         /* SEARCH */
         .search-container {
           position: relative;
+          width: 100%;
         }
         .search-icon {
           position: absolute;
@@ -706,9 +708,10 @@ export default function Clients({ isOnline }) {
 
         /* GRID CLIENTS */
         .clients-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-          gap: 20px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 16px;
         }
 
         .client-card {
@@ -719,7 +722,8 @@ export default function Clients({ isOnline }) {
           transition: transform 0.2s, box-shadow 0.2s;
           display: flex;
           flex-direction: column;
-          height: 100%;
+          width: 100%;
+          max-width: 400px;
         }
         .client-card:hover {
           transform: translateY(-3px);
@@ -989,7 +993,7 @@ export default function Clients({ isOnline }) {
 
         /* LOADER & EMPTY */
         .loader-container {
-          padding: 40px;
+          padding: 60px 20px;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -1067,7 +1071,7 @@ export default function Clients({ isOnline }) {
           .btn-new {
             padding: 12px;
             width: 100%;
-            max-width: none;
+            max-width: 200px;
           }
 
           .action-section {
@@ -1075,43 +1079,11 @@ export default function Clients({ isOnline }) {
           }
 
           .content-wrapper {
-            padding: 0 16px;
-          }
-
-          .clients-grid {
-            grid-template-columns: 1fr;
-            gap: 16px;
+            padding: 16px;
           }
 
           .client-card {
-            flex-direction: column;
-          }
-
-          .card-top {
-            padding: 20px 20px 0;
-          }
-
-          .avatar-placeholder {
-            width: 60px;
-            height: 60px;
-            font-size: 1.5rem;
-          }
-
-          .card-info {
-            padding: 16px 20px 8px;
-            text-align: center;
-          }
-
-          .badges {
-            justify-content: center;
-          }
-
-          .card-details {
-            padding: 0 20px 16px;
-          }
-
-          .card-actions-footer {
-            width: 100%;
+            max-width: 100%;
           }
 
           .modal-content {
@@ -1130,24 +1102,12 @@ export default function Clients({ isOnline }) {
 
         /* Moyens écrans (tablettes) */
         @media (min-width: 481px) and (max-width: 768px) {
-          .action-section {
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-between;
+          .content-wrapper {
+            max-width: 600px;
           }
 
-          .btn-new {
-            width: auto;
-            max-width: 180px;
-          }
-
-          .search-container {
-            flex: 1;
-            margin-left: 16px;
-          }
-
-          .clients-grid {
-            grid-template-columns: repeat(2, 1fr);
+          .client-card {
+            max-width: 500px;
           }
 
           .modal-content {
@@ -1157,23 +1117,6 @@ export default function Clients({ isOnline }) {
 
         /* Grands écrans (desktop) */
         @media (min-width: 769px) {
-          .action-section {
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-between;
-          }
-
-          .btn-new {
-            width: auto;
-            max-width: 200px;
-          }
-
-          .search-container {
-            flex: 1;
-            max-width: 500px;
-            margin-left: 24px;
-          }
-
           .mobile-nav {
             display: none;
           }
@@ -1182,23 +1125,15 @@ export default function Clients({ isOnline }) {
             padding-bottom: 0;
           }
 
-          .clients-grid {
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+          .content-wrapper {
+            max-width: 800px;
           }
         }
 
         /* Très grands écrans */
         @media (min-width: 1200px) {
           .content-wrapper {
-            max-width: 1400px;
-          }
-
-          .search-container {
-            max-width: 600px;
-          }
-
-          .clients-grid {
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            max-width: 900px;
           }
         }
 
