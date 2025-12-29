@@ -6,17 +6,13 @@ import {
   ArrowLeft, Search, User, Phone, Mail, MapPin,
   Store, Plus, X, Loader, Home, ShoppingCart,
   Package, Users, CheckCircle, AlertCircle, Info,
-  Edit, Trash2
+  Edit, Trash2, ChevronRight
 } from 'lucide-react';
 
 // =====================================================
 // 🔒 COMPOSANT DE VÉRIFICATION DE PERMISSION
-// À utiliser dans toutes vos pages protégées
 // =====================================================
 
-/**
- * Hook personnalisé pour vérifier les permissions
- */
 const usePermissionCheck = (requiredRoles = ['gerant', 'admin']) => {
   const [loading, setLoading] = useState(true);
   const [hasPermission, setHasPermission] = useState(false);
@@ -43,130 +39,39 @@ const usePermissionCheck = (requiredRoles = ['gerant', 'admin']) => {
   return { loading, hasPermission, userRole };
 };
 
-/**
- * Composant d'écran de chargement
- */
 const LoadingScreen = () => (
   <div className="loading-screen">
     <div className="spinner"></div>
     <p>Vérification des permissions...</p>
     <style jsx>{`
-      .loading-screen {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 80vh;
-        font-family: system-ui, -apple-system, sans-serif;
-        color: #64748b;
-      }
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #e2e8f0;
-        border-top: 3px solid #4f46e5;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: 15px;
-      }
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
+      .loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; font-family: system-ui, -apple-system, sans-serif; color: #64748b; }
+      .spinner { width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top: 3px solid #5542f6; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+      @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     `}</style>
   </div>
 );
 
-/**
- * Composant d'accès refusé
- */
 const AccessDenied = ({ userRole, requiredRoles = ['gérant', 'admin'] }) => (
   <div className="access-denied">
-    <div className="denied-icon">
-      <AlertCircle size={48} />
-    </div>
+    <div className="denied-icon"><AlertCircle size={48} /></div>
     <h2>Accès Refusé</h2>
-    <p>
-      Cette page nécessite les permissions: <strong>{requiredRoles.join(', ')}</strong>
-    </p>
-    {userRole && (
-      <p className="role-info">Votre rôle actuel: <strong>{userRole}</strong></p>
-    )}
-    <Link to="/dashboard" className="back-btn-denied">
-      <ArrowLeft size={16} /> Retour au tableau de bord
-    </Link>
+    <p>Cette page nécessite les permissions: <strong>{requiredRoles.join(', ')}</strong></p>
+    {userRole && <p className="role-info">Votre rôle actuel: <strong>{userRole}</strong></p>}
+    <Link to="/dashboard" className="back-btn-denied"><ArrowLeft size={16} /> Retour au tableau de bord</Link>
     <style jsx>{`
-      .access-denied {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 80vh;
-        font-family: system-ui, -apple-system, sans-serif;
-        color: #64748b;
-        text-align: center;
-        padding: 20px;
-      }
-      .denied-icon {
-        width: 80px;
-        height: 80px;
-        background: #fee2e2;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin-bottom: 20px;
-        color: #ef4444;
-      }
-      h2 {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin: 0 0 10px 0;
-      }
-      p {
-        margin: 0 0 10px 0;
-        max-width: 400px;
-      }
-      .role-info {
-        color: #64748b;
-        font-size: 0.875rem;
-        margin-bottom: 20px;
-      }
-      .back-btn-denied {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: #4f46e5;
-        color: white;
-        text-decoration: none;
-        padding: 10px 16px;
-        border-radius: 8px;
-        font-weight: 500;
-        transition: background 0.2s;
-      }
-      .back-btn-denied:hover {
-        background: #4338ca;
-      }
+      .access-denied { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; font-family: system-ui, -apple-system, sans-serif; color: #64748b; text-align: center; padding: 20px; }
+      .denied-icon { width: 80px; height: 80px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; color: #ef4444; }
+      h2 { font-size: 1.5rem; font-weight: 600; color: #1e293b; margin: 0 0 10px 0; }
+      .back-btn-denied { display: inline-flex; align-items: center; gap: 8px; background: #5542f6; color: white; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 500; }
     `}</style>
   </div>
 );
 
-/**
- * HOC (Higher Order Component) pour protéger les pages
- */
 export const withPermission = (Component, requiredRoles = ['gerant', 'admin']) => {
   return (props) => {
     const { loading, hasPermission, userRole } = usePermissionCheck(requiredRoles);
-
-    if (loading) {
-      return <LoadingScreen />;
-    }
-
-    if (!hasPermission) {
-      return <AccessDenied userRole={userRole} requiredRoles={requiredRoles} />;
-    }
-
+    if (loading) return <LoadingScreen />;
+    if (!hasPermission) return <AccessDenied userRole={userRole} requiredRoles={requiredRoles} />;
     return <Component {...props} userRole={userRole} />;
   };
 };
@@ -260,7 +165,8 @@ export default function Clients({ isOnline }) {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, e) => {
+    e.stopPropagation(); // Empêcher l'ouverture du mode édition si on clique sur supprimer
     if (!isOnline) {
       showMessage('La suppression est impossible hors ligne.', 'error');
       return;
@@ -336,7 +242,7 @@ export default function Clients({ isOnline }) {
     );
   }, [clients, searchTerm, isOnline]);
 
-  // --- 3. RENDER PERMISSION ---
+  // --- 3. RENDER ---
   if (checkingPermissions) return <LoadingScreen />;
   if (!hasPermission && isOnline) return <AccessDenied userRole={userRole} />;
   if (!hasPermission && !loading && isOnline) return <AccessDenied userRole={userRole} />;
@@ -345,808 +251,445 @@ export default function Clients({ isOnline }) {
 
   return (
     <div className="page-container">
-      {/* HEADER */}
+      {/* HEADER SIMILAIRE À L'IMAGE */}
       <header className="header">
-        <div className="header-content">
-          <Link to="/dashboard" className="back-btn">
-            <ArrowLeft size={20} />
-          </Link>
-          <div className="header-center">
-            <h1>Clients</h1>
-            <p className="subtitle">{filteredClients.length} clients enregistrés</p>
-          </div>
+        <div className="header-left">
+           <Link to="/dashboard" className="back-link">
+             <ArrowLeft size={24} color="#333" />
+             <span className="back-text">Retour</span>
+           </Link>
+        </div>
+        <div className="header-center">
+          <h1>Gestion Clients</h1>
+          <p>{filteredClients.length} enregistrés</p>
+        </div>
+        <div className="header-right">
+            {/* Indicateur de statut style "En ligne" vert de l'image */}
+            <div className={`status-pill ${isOnline ? 'online' : 'offline'}`}>
+                <div className="dot"></div>
+                <span>{isOnline ? 'En ligne' : 'Hors ligne'}</span>
+            </div>
         </div>
       </header>
 
       <div className="main-content">
-        {/* SECTION BOUTON NOUVEAU */}
-        <div className="new-client-section">
+        {/* BOUTON "NOUVELLE ENTRÉE" STYLE IMAGE */}
+        <div className="action-area">
           {isOnline && canEdit && (
-            <button className="new-client-btn" onClick={() => { resetForm(); setShowForm(true); }}>
-              <Plus size={20} />
-              <span>Nouveau</span>
+            <button className="big-purple-btn" onClick={() => { resetForm(); setShowForm(true); }}>
+              <Plus size={24} />
+              <span>Nouveau Client</span>
             </button>
           )}
         </div>
 
-        {/* SECTION RECHERCHE */}
-        <div className="search-section">
-          <div className="search-wrapper">
-            <Search className="search-icon" size={20} />
-            <input
-              type="text"
-              placeholder="Rechercher (nom, téléphone, email)..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              disabled={loading}
-            />
-            {searchTerm && (
-              <button className="clear-search" onClick={() => setSearchTerm('')}>
-                <X size={16} />
-              </button>
-            )}
-          </div>
+        {/* BARRE DE RECHERCHE */}
+        <div className="search-area">
+            <div className="search-box">
+                <Search size={20} color="#94a3b8" />
+                <input
+                    type="text"
+                    placeholder="Rechercher..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                 {searchTerm && <X size={18} color="#94a3b8" onClick={() => setSearchTerm('')} />}
+            </div>
         </div>
 
         {/* MESSAGES */}
         {message && (
           <div className={`toast ${messageType}`}>
-            {messageType === 'error' ? <AlertCircle size={18} /> : messageType === 'info' ? <Info size={18} /> : <CheckCircle size={18} />}
+            {messageType === 'error' ? <AlertCircle size={18} /> : <CheckCircle size={18} />}
             <span>{message}</span>
           </div>
         )}
 
-        {/* CONTENU PRINCIPAL */}
+        {/* LISTE DES CARTES STYLE IMAGE */}
         {loading ? (
-          <div className="loading-container">
-            <div className="spinner"></div>
-            <p>Chargement...</p>
-          </div>
+          <div className="loader-container"><div className="spinner"></div></div>
         ) : filteredClients.length === 0 ? (
-          <div className="empty-container">
-            <Users size={48} />
-            <h3>Aucun client trouvé</h3>
-            <p>{searchTerm ? 'Essayez un autre terme de recherche' : 'Commencez par ajouter votre premier client'}</p>
+          <div className="empty-state">
+            <Users size={48} color="#cbd5e1" />
+            <p>Aucun client trouvé</p>
           </div>
         ) : (
-          <div className="clients-container">
+          <div className="cards-list">
             {filteredClients.map(client => (
-              <div key={client.id} className="client-item">
-                <div className="client-header">
-                  <div className="client-avatar">
-                    {client.nom.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="client-info">
-                    <h3>{client.nom}</h3>
-                    <div className="client-boutique">
-                      <Store size={12} />
-                      <span>{client.boutique?.nom || 'Boutique #' + client.boutique}</span>
+              <div key={client.id} className="custom-card" onClick={() => canEdit && handleEdit(client)}>
+                {/* PARTIE HAUTE : ICONE + NOM */}
+                <div className="card-top">
+                    <div className="icon-box">
+                        <User size={24} color="#0EA5E9" />
                     </div>
-                  </div>
+                    <div className="card-info">
+                        <h3 className="card-title">{client.nom}</h3>
+                        <div className="stock-badge">
+                            {client.boutique?.nom || 'Boutique'}
+                        </div>
+                    </div>
                 </div>
 
-                <div className="client-details">
-                  {client.telephone && (
-                    <div className="detail-item">
-                      <Phone size={14} />
-                      <span>{client.telephone}</span>
+                {/* PARTIE MILIEU : DETAILS */}
+                <div className="card-details">
+                    <div className="detail-row">
+                        <Phone size={16} color="#94a3b8" />
+                        <span>{client.telephone || 'Pas de numéro'}</span>
                     </div>
-                  )}
-                  {client.email && (
-                    <div className="detail-item">
-                      <Mail size={14} />
-                      <span>{client.email}</span>
-                    </div>
-                  )}
-                  {client.adresse && (
-                    <div className="detail-item">
-                      <MapPin size={14} />
-                      <span>{client.adresse}</span>
-                    </div>
-                  )}
+                    {client.adresse && (
+                        <div className="detail-row">
+                            <MapPin size={16} color="#94a3b8" />
+                            <span>{client.adresse}</span>
+                        </div>
+                    )}
                 </div>
 
-                {isOnline && canEdit && (
-                  <div className="client-actions">
-                    <button onClick={() => handleEdit(client)} className="action-btn edit-btn">
-                      <Edit size={16} /> Modifier
-                    </button>
-                    <button onClick={() => handleDelete(client.id)} className="action-btn delete-btn">
-                      <Trash2 size={16} /> Supprimer
-                    </button>
-                  </div>
-                )}
+                {/* PARTIE BASSE : TOTAL / ACTIONS (Style de l'image "TOTAL ... FCFA") */}
+                <div className="card-footer">
+                    <div className="footer-label">ACTIONS</div>
+                    <div className="footer-actions">
+                        {canEdit && (
+                            <button
+                                className="delete-icon-btn"
+                                onClick={(e) => handleDelete(client.id, e)}
+                            >
+                                <Trash2 size={20} />
+                            </button>
+                        )}
+                         <span className="edit-hint">Modifier <ChevronRight size={14}/></span>
+                    </div>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* MODAL */}
+      {/* MODAL (Gardée fonctionnelle mais propre) */}
       {showForm && (
         <div className="modal-overlay" onClick={() => setShowForm(false)}>
-          <div className="modal-container" onClick={e => e.stopPropagation()}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2>{editingId ? 'Modifier Client' : 'Nouveau Client'}</h2>
-              <button className="close-btn" onClick={() => setShowForm(false)}>
-                <X size={24} />
-              </button>
+              <h2>{editingId ? 'Modifier' : 'Nouveau'} Client</h2>
+              <button onClick={() => setShowForm(false)}><X size={24} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="modal-form">
-              <div className="form-group">
-                <label>Nom complet *</label>
-                <div className="input-with-icon">
-                  <User size={18} className="input-icon" />
-                  <input
-                    type="text"
-                    value={formData.nom}
-                    onChange={e => setFormData({ ...formData, nom: e.target.value })}
-                    required
-                    placeholder="Ex: Jean Dupont"
-                  />
+            <form onSubmit={handleSubmit}>
+              <div className="input-group">
+                <label>Nom complet</label>
+                <input type="text" value={formData.nom} onChange={e => setFormData({ ...formData, nom: e.target.value })} required placeholder="Ex: Jean Dupont" />
+              </div>
+              <div className="input-row">
+                <div className="input-group">
+                    <label>Téléphone</label>
+                    <input type="tel" value={formData.telephone} onChange={e => setFormData({ ...formData, telephone: e.target.value })} placeholder="06..." />
+                </div>
+                <div className="input-group">
+                    <label>Email</label>
+                    <input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} placeholder="@..." />
                 </div>
               </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Téléphone</label>
-                  <div className="input-with-icon">
-                    <Phone size={18} className="input-icon" />
-                    <input
-                      type="tel"
-                      value={formData.telephone}
-                      onChange={e => setFormData({ ...formData, telephone: e.target.value })}
-                      placeholder="06..."
-                    />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <div className="input-with-icon">
-                    <Mail size={18} className="input-icon" />
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={e => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="client@mail.com"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-group">
+              <div className="input-group">
                 <label>Adresse</label>
-                <div className="input-with-icon">
-                  <MapPin size={18} className="input-icon" />
-                  <input
-                    type="text"
-                    value={formData.adresse}
-                    onChange={e => setFormData({ ...formData, adresse: e.target.value })}
-                    placeholder="Adresse complète"
-                  />
-                </div>
+                <input type="text" value={formData.adresse} onChange={e => setFormData({ ...formData, adresse: e.target.value })} placeholder="Adresse" />
               </div>
-
-              <div className="form-group">
-                <label>Boutique d'inscription *</label>
-                <div className="input-with-icon">
-                  <Store size={18} className="input-icon" />
-                  <select
-                    value={formData.boutique}
-                    onChange={e => setFormData({ ...formData, boutique: e.target.value })}
-                    required
-                  >
-                    <option value="">Sélectionner une boutique</option>
-                    {boutiques.map(b => <option key={b.id} value={b.id}>{b.nom}</option>)}
-                  </select>
-                </div>
+              <div className="input-group">
+                <label>Boutique</label>
+                <select value={formData.boutique} onChange={e => setFormData({ ...formData, boutique: e.target.value })} required>
+                  <option value="">Choisir boutique</option>
+                  {boutiques.map(b => <option key={b.id} value={b.id}>{b.nom}</option>)}
+                </select>
               </div>
-
-              <div className="modal-actions">
-                <button type="button" onClick={() => setShowForm(false)} className="cancel-btn">
-                  Annuler
-                </button>
-                <button type="submit" className="submit-btn">
-                  {editingId ? 'Mettre à jour' : 'Enregistrer Client'}
-                </button>
-              </div>
+              <button type="submit" className="submit-btn">
+                {editingId ? 'Sauvegarder' : 'Créer Client'}
+              </button>
             </form>
           </div>
         </div>
       )}
 
+      {/* NAVIGATION DU BAS (Identique) */}
       <nav className="bottom-nav">
-        <Link to="/dashboard" className="nav-item">
-          <Home size={20} />
-          <span>Accueil</span>
-        </Link>
-        <Link to="/ventes" className="nav-item">
-          <ShoppingCart size={20} />
-          <span>Vente</span>
-        </Link>
-        <Link to="/produits" className="nav-item">
-          <Package size={20} />
-          <span>Stock</span>
-        </Link>
-        <Link to="/clients" className="nav-item active">
-          <Users size={20} />
-          <span>Clients</span>
-        </Link>
+        <Link to="/dashboard" className="nav-item"><Home size={20} /><span>Accueil</span></Link>
+        <Link to="/ventes" className="nav-item"><ShoppingCart size={20} /><span>Vente</span></Link>
+        <Link to="/produits" className="nav-item"><Package size={20} /><span>Stock</span></Link>
+        <Link to="/clients" className="nav-item active"><Users size={20} /><span>Clients</span></Link>
       </nav>
 
       <style jsx>{`
+        /* GLOBAL LAYOUT */
         .page-container {
           min-height: 100vh;
-          background: #f8fafc;
-          font-family: 'Inter', sans-serif;
-          color: #1e293b;
+          background-color: #f9fafb; /* Fond très clair comme l'image */
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
           padding-bottom: 80px;
+          color: #1e293b;
         }
 
-        /* HEADER */
+        /* HEADER STYLE IMAGE */
         .header {
           background: white;
-          border-bottom: 1px solid #e2e8f0;
-          padding: 16px 20px;
+          padding: 15px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           position: sticky;
           top: 0;
           z-index: 10;
         }
-
-        .header-content {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          position: relative;
-          max-width: 600px;
-          margin: 0 auto;
-        }
-
-        .back-btn {
-          position: absolute;
-          left: 0;
-          color: #64748b;
-          padding: 8px;
-          border-radius: 50%;
-          background: #f1f5f9;
-          display: flex;
-          align-items: center;
-          transition: 0.2s;
-        }
-
-        .back-btn:hover {
-          background: #e2e8f0;
-          color: #0f172a;
-        }
+        .header-left { flex: 1; }
+        .back-link { display: flex; align-items: center; gap: 5px; text-decoration: none; color: #64748b; font-weight: 500; }
+        .back-text { font-size: 1rem; color: #64748b; }
 
         .header-center {
+          flex: 2;
           text-align: center;
         }
-
-        .header h1 {
-          margin: 0;
-          font-size: 1.25rem;
-          font-weight: 700;
+        .header-center h1 {
+          font-size: 1.1rem;
+          font-weight: 800;
           color: #0f172a;
+          margin: 0;
         }
-
-        .subtitle {
-          margin: 4px 0 0;
+        .header-center p {
           font-size: 0.8rem;
-          color: #64748b;
+          color: #94a3b8;
+          margin: 2px 0 0 0;
         }
 
-        /* MAIN CONTENT */
+        .header-right { flex: 1; display: flex; justify-content: flex-end; }
+
+        /* STATUS PILL (Le badge vert en haut à droite) */
+        .status-pill {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          color: white;
+        }
+        .status-pill.online { background-color: #10b981; box-shadow: 0 2px 5px rgba(16, 185, 129, 0.3); }
+        .status-pill.offline { background-color: #64748b; }
+        .dot { width: 8px; height: 8px; background: white; border-radius: 50%; opacity: 0.8; }
+
+        /* MAIN CONTENT CENTERING */
         .main-content {
-          max-width: 600px;
+          max-width: 500px; /* Limite la largeur comme sur un mobile centré */
           margin: 0 auto;
           padding: 20px;
         }
 
-        /* BOUTON NOUVEAU */
-        .new-client-section {
-          display: flex;
-          justify-content: center;
-          margin-bottom: 24px;
+        /* BIG PURPLE BUTTON */
+        .action-area {
+          margin-bottom: 20px;
         }
-
-        .new-client-btn {
-          background: #4f46e5;
+        .big-purple-btn {
+          width: 100%;
+          background-color: #5542f6; /* Violet de l'image */
           color: white;
           border: none;
-          padding: 14px 28px;
-          border-radius: 12px;
+          padding: 16px;
+          border-radius: 14px;
+          font-size: 1rem;
           font-weight: 600;
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 10px;
+          box-shadow: 0 4px 12px rgba(85, 66, 246, 0.25);
           cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+          transition: transform 0.1s;
         }
+        .big-purple-btn:active { transform: scale(0.98); }
 
-        .new-client-btn:hover:not(:disabled) {
-          background: #4338ca;
-          transform: translateY(-2px);
-          box-shadow: 0 6px 8px -1px rgba(79, 70, 229, 0.3);
-        }
-
-        .new-client-btn:disabled {
-          background: #cbd5e1;
-          cursor: not-allowed;
-          box-shadow: none;
-        }
-
-        /* RECHERCHE */
-        .search-section {
-          margin-bottom: 24px;
-        }
-
-        .search-wrapper {
-          position: relative;
-          width: 100%;
-        }
-
-        .search-icon {
-          position: absolute;
-          left: 16px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #94a3b8;
-        }
-
-        .search-wrapper input {
-          width: 100%;
-          padding: 16px 20px 16px 48px;
+        /* SEARCH AREA */
+        .search-area { margin-bottom: 20px; }
+        .search-box {
+          background: white;
           border: 1px solid #e2e8f0;
           border-radius: 12px;
-          font-size: 1rem;
-          background: white;
-          transition: 0.2s;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+          padding: 12px 16px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
         }
-
-        .search-wrapper input:focus {
-          border-color: #6366f1;
-          outline: none;
-          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-
-        .search-wrapper input:disabled {
-          background: #f8fafc;
-          cursor: not-allowed;
-        }
-
-        .clear-search {
-          position: absolute;
-          right: 16px;
-          top: 50%;
-          transform: translateY(-50%);
-          background: none;
+        .search-box input {
           border: none;
-          color: #94a3b8;
-          cursor: pointer;
-          padding: 4px;
+          outline: none;
+          width: 100%;
+          font-size: 0.95rem;
+          color: #334155;
         }
 
-        /* CLIENTS LIST */
-        .clients-container {
+        /* CARDS STYLE IMAGE "POULET" */
+        .cards-list {
           display: flex;
           flex-direction: column;
           gap: 16px;
         }
-
-        .client-item {
+        .custom-card {
           background: white;
-          border-radius: 16px;
-          border: 1px solid #f1f5f9;
-          overflow: hidden;
-          transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .client-item:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.05);
-        }
-
-        .client-header {
+          border-radius: 20px; /* Arrondi prononcé comme l'image */
           padding: 20px;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03); /* Ombre très douce */
+          cursor: pointer;
+          transition: transform 0.2s;
+        }
+        .custom-card:hover { transform: translateY(-2px); }
+
+        /* Card Top: Icon + Title */
+        .card-top {
           display: flex;
           align-items: center;
           gap: 16px;
-          border-bottom: 1px solid #f1f5f9;
-          background: linear-gradient(to right, #ffffff, #f8fafc);
+          margin-bottom: 16px;
         }
-
-        .client-avatar {
-          width: 56px;
-          height: 56px;
-          background: #e0e7ff;
-          color: #4f46e5;
-          border-radius: 50%;
+        .icon-box {
+          width: 50px;
+          height: 50px;
+          background-color: #e0f2fe; /* Bleu clair fond icone */
+          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 1.25rem;
-          font-weight: 700;
-          flex-shrink: 0;
         }
-
-        .client-info h3 {
-          margin: 0 0 6px 0;
-          font-size: 1.1rem;
-          font-weight: 600;
-          color: #1e293b;
-        }
-
-        .client-boutique {
+        .card-info {
           display: flex;
-          align-items: center;
-          gap: 6px;
+          flex-direction: column;
+          gap: 4px;
+        }
+        .card-title {
+          margin: 0;
+          font-size: 1.1rem;
+          font-weight: 700;
+          color: #0f172a;
+        }
+        .stock-badge {
+          background-color: #dcfce7; /* Vert clair badge */
+          color: #166534;
           font-size: 0.75rem;
-          color: #64748b;
-          background: #f1f5f9;
+          font-weight: 700;
           padding: 4px 8px;
           border-radius: 6px;
           width: fit-content;
         }
 
-        .client-details {
-          padding: 16px 20px;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
+        /* Card Details: Middle */
+        .card-details {
+          margin-bottom: 20px;
         }
-
-        .detail-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          color: #64748b;
-          font-size: 0.9rem;
-        }
-
-        .detail-item svg {
-          color: #94a3b8;
-          flex-shrink: 0;
-        }
-
-        .detail-item span {
-          color: #334155;
-          word-break: break-word;
-        }
-
-        .client-actions {
-          display: flex;
-          border-top: 1px solid #f1f5f9;
-        }
-
-        .action-btn {
-          flex: 1;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 14px;
-          font-size: 0.85rem;
-          font-weight: 600;
-          border: none;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-
-        .edit-btn {
-          background: white;
-          color: #475569;
-          border-right: 1px solid #f1f5f9;
-        }
-
-        .edit-btn:hover {
-          background: #f8fafc;
-          color: #1e293b;
-        }
-
-        .delete-btn {
-          background: #fff5f5;
-          color: #e53e3e;
-        }
-
-        .delete-btn:hover {
-          background: #fee2e2;
-          color: #c53030;
-        }
-
-        /* LOADING & EMPTY STATES */
-        .loading-container,
-        .empty-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 60px 20px;
-          text-align: center;
-          color: #64748b;
-        }
-
-        .empty-container h3 {
-          color: #334155;
-          margin: 16px 0 8px;
-        }
-
-        .empty-container p {
-          margin: 0;
-          max-width: 300px;
-        }
-
-        .spinner {
-          width: 32px;
-          height: 32px;
-          border: 3px solid #e2e8f0;
-          border-top-color: #4f46e5;
-          border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        /* TOAST */
-        .toast {
-          position: fixed;
-          bottom: 80px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: #1e293b;
-          color: white;
-          padding: 12px 24px;
-          border-radius: 30px;
+        .detail-row {
           display: flex;
           align-items: center;
           gap: 10px;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-          animation: slideUp 0.3s ease;
-          z-index: 50;
+          color: #64748b;
+          font-size: 0.9rem;
+          margin-bottom: 8px;
         }
 
-        .toast.error {
-          background: #ef4444;
+        /* Card Footer: Total/Actions */
+        .card-footer {
+          background-color: #f8fafc; /* Fond gris clair bas de carte */
+          margin: 0 -20px -20px -20px; /* Étendre aux bords */
+          padding: 15px 20px;
+          border-radius: 0 0 20px 20px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border-top: 1px solid #f1f5f9;
         }
-
-        .toast.info {
-          background: #3b82f6;
+        .footer-label {
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+        .footer-actions {
+          display: flex;
+          align-items: center;
+          gap: 15px;
+        }
+        .edit-hint {
+          color: #5542f6;
+          font-weight: 700;
+          font-size: 1rem;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+        .delete-icon-btn {
+          background: #fee2e2;
+          border: none;
+          color: #ef4444;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
         }
 
         /* MODAL */
         .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.5);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 100;
-          padding: 20px;
+          position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); z-index: 100;
+          display: flex; align-items: center; justify-content: center; padding: 20px;
         }
-
-        .modal-container {
-          background: white;
-          width: 100%;
-          max-width: 500px;
-          border-radius: 20px;
-          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-          overflow: hidden;
-          animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        .modal-content {
+          background: white; width: 100%; max-width: 400px; border-radius: 20px; overflow: hidden;
+          box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
         }
-
         .modal-header {
-          padding: 20px;
-          border-bottom: 1px solid #e2e8f0;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: #f8fafc;
+          padding: 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;
         }
+        .modal-header h2 { margin: 0; font-size: 1.2rem; }
+        .modal-header button { background: none; border: none; cursor: pointer; color: #94a3b8; }
 
-        .modal-header h2 {
-          margin: 0;
-          font-size: 1.25rem;
-          color: #1e293b;
+        form { padding: 20px; }
+        .input-group { margin-bottom: 16px; }
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        label { display: block; margin-bottom: 6px; font-size: 0.85rem; color: #64748b; font-weight: 500; }
+        input, select {
+          width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem;
+          box-sizing: border-box; transition: border-color 0.2s;
         }
-
-        .close-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #64748b;
-          padding: 4px;
-        }
-
-        .modal-form {
-          padding: 24px;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 8px;
-          font-size: 0.9rem;
-          font-weight: 500;
-          color: #334155;
-        }
-
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 16px;
-        }
-
-        .input-with-icon {
-          position: relative;
-        }
-
-        .input-icon {
-          position: absolute;
-          left: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #94a3b8;
-          pointer-events: none;
-        }
-
-        .input-with-icon input,
-        .input-with-icon select {
-          width: 100%;
-          padding: 12px 12px 12px 40px;
-          border: 1px solid #cbd5e1;
-          border-radius: 8px;
-          font-family: inherit;
-          font-size: 0.95rem;
-          transition: 0.2s;
-          background: white;
-        }
-
-        .input-with-icon input:focus,
-        .input-with-icon select:focus {
-          border-color: #4f46e5;
-          outline: none;
-          box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-
-        .modal-actions {
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-          margin-top: 24px;
-          padding-top: 20px;
-          border-top: 1px solid #e2e8f0;
-        }
-
-        .cancel-btn {
-          background: #f1f5f9;
-          color: #475569;
-          border: none;
-          padding: 10px 20px;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
-        }
+        input:focus, select:focus { outline: none; border-color: #5542f6; }
 
         .submit-btn {
-          background: #4f46e5;
-          color: white;
-          border: none;
-          padding: 10px 20px;
-          border-radius: 8px;
-          font-weight: 600;
-          cursor: pointer;
+          width: 100%; padding: 14px; background: #5542f6; color: white; border: none; border-radius: 10px;
+          font-weight: 600; cursor: pointer; margin-top: 10px;
         }
 
-        .submit-btn:hover {
-          background: #4338ca;
+        /* TOAST */
+        .toast {
+          position: fixed; bottom: 85px; left: 50%; transform: translateX(-50%);
+          background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px;
+          display: flex; align-items: center; gap: 8px; font-size: 0.9rem; z-index: 99;
         }
+        .toast.error { background: #ef4444; }
+
+        /* LOADING */
+        .loader-container, .empty-state { display: flex; flex-direction: column; align-items: center; padding: 40px; color: #94a3b8; }
+        .spinner { width: 30px; height: 30px; border: 3px solid #e2e8f0; border-top-color: #5542f6; border-radius: 50%; animation: spin 1s infinite; }
 
         /* BOTTOM NAV */
         .bottom-nav {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          background: white;
-          border-top: 1px solid #e2e8f0;
-          display: flex;
-          justify-content: space-around;
-          padding: 12px 0;
-          padding-bottom: max(12px, env(safe-area-inset-bottom));
-          z-index: 90;
+          position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e2e8f0;
+          display: flex; justify-content: space-around; padding: 10px 0; z-index: 90;
         }
+        .nav-item { display: flex; flex-direction: column; align-items: center; color: #94a3b8; text-decoration: none; font-size: 0.7rem; gap: 4px; }
+        .nav-item.active { color: #5542f6; }
 
-        .nav-item {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          color: #94a3b8;
-          text-decoration: none;
-          font-size: 0.7rem;
-          gap: 4px;
-        }
-
-        .nav-item.active {
-          color: #4f46e5;
-        }
-
-        /* ANIMATIONS */
-        @keyframes spin {
-          100% {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes slideUp {
-          from {
-            transform: translate(-50%, 20px);
-            opacity: 0;
-          }
-
-          to {
-            transform: translate(-50%, 0);
-            opacity: 1;
-          }
-        }
-
-        @keyframes popIn {
-          from {
-            opacity: 0;
-            transform: scale(0.95);
-          }
-
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-
-        /* RESPONSIVE */
-        @media (max-width: 640px) {
-          .main-content {
-            padding: 16px;
-          }
-
-          .form-row {
-            grid-template-columns: 1fr;
-            gap: 12px;
-          }
-
-          .client-header {
-            padding: 16px;
-          }
-
-          .client-details {
-            padding: 16px;
-          }
-
-          .modal-container {
-            margin: 0 10px;
-          }
-
-          .modal-form {
-            padding: 16px;
-          }
-        }
-
-        @media (min-width: 769px) {
-          .bottom-nav {
-            display: none;
-          }
-
-          .page-container {
-            padding-bottom: 0;
-          }
+        @media (min-width: 768px) {
+          .bottom-nav { display: none; }
+          .page-container { padding-bottom: 0; }
         }
       `}</style>
     </div>
   );
 }
 
-// Export des composants de permission
+// Exports
 export { usePermissionCheck, LoadingScreen, AccessDenied };
