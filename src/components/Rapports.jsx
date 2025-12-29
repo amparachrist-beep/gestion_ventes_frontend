@@ -17,7 +17,7 @@ export default function Rapports({ isOnline }) {
     if (isOnline) loadReportData();
   }, [isOnline, period]);
 
-  // --- LOGIQUE MÉTIER (INTACTE) ---
+  // --- LOGIQUE MÉTIER ---
 
   const loadReportData = async () => {
     if (!isOnline) {
@@ -435,44 +435,26 @@ export default function Rapports({ isOnline }) {
         .dot-exp { background: #f43f5e; }
 
         /* CUSTOM CHART */
-        .chart-wrapper {
-          width: 100%;
-          height: 250px;
-          /* AJOUT SCROLL POUR MOBILE */
-          overflow-x: auto;
-          overflow-y: hidden;
-          -webkit-overflow-scrolling: touch;
-        }
-
+        .chart-wrapper { width: 100%; height: 250px; }
         .bars-container {
-          display: flex;
-          justify-content: space-around;
-          align-items: flex-end;
-          height: 100%;
-          /* min-width permet au graphe de ne pas s'écraser sur mobile */
-          min-width: 100%;
-          padding-bottom: 20px;
-          padding-left: 10px;
+          display: flex; justify-content: space-around; align-items: flex-end;
+          height: 100%; width: 100%; padding-bottom: 20px;
         }
-
         .bar-group {
           display: flex; flex-direction: column; align-items: center;
           height: 100%; justify-content: flex-end; flex: 1;
-          min-width: 40px; /* Assure une largeur minimale par barre */
         }
-
         .bars-pair {
-          display: flex; align-items: flex-end; gap: 4px; height: 85%; width: 30px;
+          display: flex; align-items: flex-end; gap: 4px; height: 85%; width: 40px;
           justify-content: center;
         }
-
         .bar { width: 12px; border-radius: 4px 4px 0 0; transition: height 0.5s ease; min-height: 4px; }
         .sales-bar { background: #6366f1; opacity: 0.9; }
         .sales-bar:hover { background: #4f46e5; opacity: 1; }
         .expenses-bar { background: #f43f5e; opacity: 0.9; }
         .expenses-bar:hover { background: #e11d48; opacity: 1; }
 
-        .bar-label { margin-top: 8px; font-size: 0.75rem; color: #94a3b8; font-weight: 500; white-space: nowrap; }
+        .bar-label { margin-top: 8px; font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
 
         /* SECONDARY STATS LIST */
         .stats-list { display: flex; flex-direction: column; gap: 16px; }
@@ -490,28 +472,19 @@ export default function Rapports({ isOnline }) {
         .table-card {
           background: white; border-radius: 16px; padding: 24px;
           box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #f1f5f9;
-          overflow: hidden; /* Empêche le débordement de la carte */
         }
-
-        .table-responsive {
-          width: 100%;
-          overflow-x: auto; /* SCROLL HORIZONTAL TABLEAU */
-          -webkit-overflow-scrolling: touch;
-        }
-
         .btn-export {
           background: white; border: 1px solid #e2e8f0; padding: 6px 12px; border-radius: 8px;
           color: #64748b; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.85rem;
         }
         .btn-export:hover { background: #f8fafc; color: #334155; }
 
-        .report-table { width: 100%; border-collapse: collapse; min-width: 500px; /* Force la largeur pour déclencher le scroll sur mobile */ }
+        .report-table { width: 100%; border-collapse: collapse; }
         .report-table th {
           text-align: left; font-size: 0.75rem; text-transform: uppercase;
           color: #94a3b8; padding: 12px; font-weight: 600; letter-spacing: 0.05em;
-          white-space: nowrap;
         }
-        .report-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; white-space: nowrap; }
+        .report-table td { padding: 16px 12px; border-bottom: 1px solid #f1f5f9; font-size: 0.9rem; }
         .report-table tr:last-child td { border-bottom: none; }
 
         .text-right { text-align: right; }
@@ -542,18 +515,7 @@ export default function Rapports({ isOnline }) {
           .report-header { flex-direction: column; align-items: flex-start; gap: 12px; }
           .header-actions { width: 100%; }
           .period-select { flex: 1; }
-
-          /* Pour le graphe mobile : on force une largeur minimale au conteneur interne pour activer le scroll */
-          .bars-container {
-            justify-content: flex-start;
-            gap: 10px;
-            padding-right: 20px;
-          }
-          /* Si beaucoup de données (mensuel), on s'assure que ça ne s'écrase pas */
-          .bar-group {
-             min-width: 50px;
-          }
-          .bars-pair { width: 24px; }
+          .bars-pair { gap: 2px; width: 20px; }
         }
       `}</style>
     </div>
