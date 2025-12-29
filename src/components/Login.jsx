@@ -32,7 +32,7 @@ export default function Login() {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1>📊 Sales Management</h1>
+        <h1>📊 Hitch-Ventes</h1>
         <h2>Connexion</h2>
 
         {error && <div className="error-message">{error}</div>} {/* Affichage de l'erreur */}
