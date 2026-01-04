@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 
+// 🆕 NOUVELLE PAGE D'ACCUEIL (Chemin corrigé vers components)
+import LandingPage from './components/LandingPage';
+
 // 🔐 Pages d'authentification
 import Login from './components/Login';
 import Register from './components/Register';
@@ -28,6 +31,7 @@ import Export from './components/Export';
 // 📋 Historique
 import HistoriqueVentes from './components/HistoriqueVentes';
 import HistoriqueMesVentes from './components/HistoriqueMesVentes';
+
 // 🔧 Utilitaires
 import { isAuthenticated } from './auth';
 import { initDB } from './db';
@@ -98,11 +102,14 @@ function App() {
         </div>
 
         <Routes>
+          {/* 🏠 NOUVELLE RACINE : Landing Page (Public) */}
+          <Route path="/" element={<LandingPage />} />
+
           {/* 🔐 AUTHENTIFICATION */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* 📊 PAGES PRINCIPALES */}
+          {/* 📊 PAGES PRINCIPALES (Protégées) */}
           <Route
             path="/dashboard"
             element={
@@ -232,9 +239,8 @@ function App() {
               }
           />
 
-          {/* 🏠 REDIRECTION PAR DÉFAUT */}
-          <Route path="/" element={<Navigate to="/dashboard" />} />
-          <Route path="*" element={<Navigate to="/dashboard" />} />
+          {/* ⚠️ CATCH-ALL : Redirection vers la Landing Page si route inconnue */}
+          <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </div>
     </Router>
