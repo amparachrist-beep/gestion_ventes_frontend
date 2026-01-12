@@ -55,18 +55,6 @@ export default function Login() {
             box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
           }
 
-          /* Gestion Responsive */
-          @media (max-width: 480px) {
-            .auth-card {
-              width: 95% !important;
-              padding: 30px 20px !important;
-              margin: 10px !important;
-            }
-            .logo-text {
-              font-size: 1.1rem !important;
-            }
-          }
-
           /* Animation d'apparition */
           .auth-card {
             animation: fadeIn 0.5s ease-out;
@@ -75,6 +63,34 @@ export default function Login() {
           @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
+          }
+
+          /* Gestion Responsive - Mobile */
+          @media (max-width: 480px) {
+            .auth-card {
+              width: 95% !important;
+              padding: 30px 20px !important;
+            }
+            .logo-text {
+              font-size: 1.1rem !important;
+            }
+          }
+
+          /* Gestion Responsive - Tablette */
+          @media (min-width: 481px) and (max-width: 768px) {
+            .auth-card {
+              width: 85% !important;
+              max-width: 500px !important;
+              padding: 35px 25px !important;
+            }
+          }
+
+          /* Gestion Responsive - Bureau */
+          @media (min-width: 769px) {
+            .auth-card {
+              width: 100% !important;
+              max-width: 450px !important;
+            }
           }
         `}
       </style>
@@ -165,8 +181,8 @@ export default function Login() {
 
 const styles = {
   authContainer: {
-    width: '100%',
-    minHeight: '100vh',
+    width: '100vw',  // Utilisation de vw pour garantir 100% de la largeur de la vue
+    height: '100vh', // Utilisation de vh pour garantir 100% de la hauteur de la vue
     display: 'flex',
     alignItems: 'center',      // Centrage vertical
     justifyContent: 'center',    // Centrage horizontal
@@ -175,6 +191,7 @@ const styles = {
     margin: 0,
     padding: '20px',
     boxSizing: 'border-box',    // Important pour éviter les débordements
+    overflow: 'auto',           // Permet le défilement si le contenu dépasse
   },
   authCard: {
     width: '100%',
