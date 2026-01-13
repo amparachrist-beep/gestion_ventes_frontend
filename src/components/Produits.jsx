@@ -483,12 +483,36 @@ export default function Produits({ isOnline }) {
 
         /* MODAL */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
-        .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+
+        /* FIX APPORTÉ ICI: max-height et flex */
+        .modal-content {
+          background: white;
+          width: 100%;
+          max-width: 500px;
+          border-radius: 20px;
+          box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);
+          overflow: hidden;
+          animation: popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          max-height: 90vh; /* Limite la hauteur à 90% de l'écran */
+          display: flex;    /* Permet de structurer l'intérieur */
+          flex-direction: column;
+        }
+
         @keyframes popIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+
+        .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .modal-header h2 { margin: 0; font-size: 1.25rem; }
         .close-modal { background: none; border: none; cursor: pointer; color: #64748b; }
-        .modal-form { padding: 24px; display: flex; flex-direction: column; gap: 16px; }
+
+        /* FIX APPORTÉ ICI: overflow-y: auto */
+        .modal-form {
+          padding: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          overflow-y: auto; /* Active le défilement si le contenu est trop long */
+        }
+
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .form-group label { display: block; margin-bottom: 6px; font-size: 0.9rem; font-weight: 500; color: #334155; }
         .form-group input, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: inherit; font-size: 0.95rem; transition: 0.2s; }
